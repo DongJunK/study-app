@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# learning data (personal study records)
+/data/topics/
+/data/sessions/
+/data/tests/

@@ -1,0 +1,1 @@
+export { AnswerComparison } from './AnswerComparison';

@@ -1,0 +1,1 @@
+export { WeaknessTag } from './WeaknessTag';

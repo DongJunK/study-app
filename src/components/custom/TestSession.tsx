@@ -1,0 +1,314 @@
+"use client";
+
+import * as React from "react";
+import { StreamingChat } from "@/components/custom/StreamingChat";
+import { useTestStore } from "@/stores/testStore";
+import type { Message } from "@/types/session";
+import type { TestType, TestAnswer } from "@/types/test";
+import { Clock, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+interface TestSessionProps {
+  topicId: string;
+  topicName: string;
+  type: TestType;
+  duration: number;
+  onComplete: (answers: TestAnswer[]) => void;
+}
+
+export function TestSession({
+  topicId,
+  topicName,
+  type,
+  duration,
+  onComplete,
+}: TestSessionProps) {
+  const [messages, setMessages] = React.useState<Message[]>([]);
+  const [isStreaming, setIsStreaming] = React.useState(false);
+  const [timeLeft, setTimeLeft] = React.useState(duration * 60);
+  const [isStarted, setIsStarted] = React.useState(false);
+  const [testFinished, setTestFinished] = React.useState(false);
+  const questionCountRef = React.useRef(0);
+
+  const { currentTest, addAnswer } = useTestStore();
+
+  const answers = currentTest?.answers ?? [];
+
+  // Timer
+  React.useEffect(() => {
+    if (!isStarted || testFinished) return;
+    if (timeLeft <= 0) {
+      setTestFinished(true);
+      return;
+    }
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          setTestFinished(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isStarted, testFinished, timeLeft]);
+
+  // Start test - fetch initial question
+  React.useEffect(() => {
+    if (isStarted) return;
+    setIsStarted(true);
+    startTestStream();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function startTestStream() {
+    setIsStreaming(true);
+    try {
+      const res = await fetch("/api/test/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topicId,
+          topicName,
+          type,
+          concepts: [],
+        }),
+      });
+
+      if (!res.ok || !res.body) throw new Error("Stream failed");
+
+      const assistantMsg: Message = {
+        role: "assistant",
+        content: "",
+        timestamp: new Date().toISOString(),
+      };
+      setMessages([assistantMsg]);
+
+      await processStream(res.body, "");
+    } catch {
+      setMessages([
+        {
+          role: "assistant",
+          content: "테스트를 시작하는데 실패했습니다. 다시 시도해주세요.",
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+    } finally {
+      setIsStreaming(false);
+    }
+  }
+
+  async function processStream(body: ReadableStream<Uint8Array>, _prefix: string) {
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let accumulated = _prefix;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split("\n");
+
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const data = line.slice(6);
+        if (data === "[DONE]") continue;
+
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.type === "text" && parsed.content) {
+            accumulated += parsed.content;
+            setMessages((prev) => {
+              const updated = [...prev];
+              updated[updated.length - 1] = {
+                ...updated[updated.length - 1],
+                content: accumulated,
+              };
+              return updated;
+            });
+          } else if (parsed.type === "done" && parsed.content) {
+            accumulated = parsed.content;
+            setMessages((prev) => {
+              const updated = [...prev];
+              updated[updated.length - 1] = {
+                ...updated[updated.length - 1],
+                content: accumulated,
+              };
+              return updated;
+            });
+          }
+        } catch {
+          // skip non-JSON
+        }
+      }
+    }
+
+    // After stream ends, check for score JSON in the response
+    parseScoreFromResponse(accumulated);
+  }
+
+  function parseScoreFromResponse(text: string) {
+    const jsonMatches = text.match(/```json\s*\n?([\s\S]*?)```/g);
+    if (!jsonMatches) return;
+
+    for (const match of jsonMatches) {
+      const jsonStr = match.replace(/```json\s*\n?/, "").replace(/```/, "").trim();
+      try {
+        const parsed = JSON.parse(jsonStr);
+
+        // Check for final summary
+        if (parsed.type === "final") {
+          setTestFinished(true);
+          return;
+        }
+
+        // Check for score response
+        if (typeof parsed.score === "number" && typeof parsed.maxScore === "number") {
+          questionCountRef.current += 1;
+          const answer: TestAnswer = {
+            questionIndex: questionCountRef.current,
+            question: "",
+            userAnswer: "",
+            modelAnswer: "",
+            score: parsed.score,
+            maxScore: parsed.maxScore,
+            passed: parsed.passed ?? parsed.score >= 7,
+            feedback: parsed.feedback || "",
+          };
+          addAnswer(answer);
+        }
+      } catch {
+        // skip invalid JSON
+      }
+    }
+  }
+
+  async function handleSendMessage(content: string) {
+    if (testFinished) return;
+
+    const userMsg: Message = {
+      role: "user",
+      content,
+      timestamp: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, userMsg]);
+    setIsStreaming(true);
+
+    try {
+      // Send user answer to the streaming chat with conversation context
+      const conversationContext = messages
+        .map((m) => `${m.role === "user" ? "학생" : "시험관"}: ${m.content}`)
+        .join("\n\n");
+
+      const res = await fetch("/api/claude/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: `이전 대화:\n${conversationContext}\n\n학생: ${content}`,
+          systemPrompt: getSystemPromptForType(type, topicName),
+        }),
+      });
+
+      if (!res.ok || !res.body) throw new Error("Stream failed");
+
+      const assistantMsg: Message = {
+        role: "assistant",
+        content: "",
+        timestamp: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, assistantMsg]);
+
+      await processStream(res.body, "");
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "응답을 가져오는데 실패했습니다.",
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+    } finally {
+      setIsStreaming(false);
+    }
+  }
+
+  function formatTime(seconds: number): string {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  }
+
+  const isTimeLow = timeLeft < 60;
+
+  return (
+    <div className="flex h-full flex-col">
+      {/* Header with timer */}
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <h2 className="text-sm font-medium text-muted-foreground">
+          {topicName} - {getTypeLabel(type)}
+        </h2>
+        <div className="flex items-center gap-4">
+          <div
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-mono font-medium ${
+              isTimeLow
+                ? "bg-red-500/10 text-red-600 dark:text-red-400"
+                : "bg-muted text-foreground"
+            }`}
+          >
+            <Clock className="size-3.5" />
+            {formatTime(timeLeft)}
+          </div>
+          {testFinished && (
+            <Button size="sm" onClick={() => onComplete(answers)}>
+              결과 보기
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Time's up notice */}
+      {testFinished && timeLeft <= 0 && (
+        <div className="flex items-center gap-2 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-600 dark:text-amber-400">
+          <AlertCircle className="size-4" />
+          시간이 종료되었습니다.
+        </div>
+      )}
+
+      {/* Chat area */}
+      <div className="flex-1 overflow-hidden">
+        <StreamingChat
+          messages={messages}
+          isStreaming={isStreaming}
+          onSendMessage={handleSendMessage}
+          placeholder={testFinished ? "테스트가 종료되었습니다" : "답변을 입력하세요..."}
+          disabled={testFinished}
+        />
+      </div>
+
+    </div>
+  );
+}
+
+function getTypeLabel(type: TestType): string {
+  switch (type) {
+    case "deep-learning":
+      return "깊은 학습 시뮬레이션";
+    case "multiple-choice":
+      return "객관식 퀴즈";
+    case "short-answer":
+      return "주관식 퀴즈";
+  }
+}
+
+function getSystemPromptForType(type: TestType, topicName: string): string {
+  switch (type) {
+    case "deep-learning":
+      return `당신은 "${topicName}" 분야의 심층 학습 검증 전문가입니다. 이전 대화를 이어서 진행하세요. 학생의 답변을 평가하고 점수를 매긴 뒤, 꼬리질문을 계속하세요. 각 답변 평가 후 반드시 \`\`\`json {"score": N, "maxScore": 10, "passed": true/false, "feedback": "피드백"} \`\`\` 형식의 JSON을 포함하세요. 모든 질문이 끝나면 \`\`\`json {"type": "final", "totalQuestions": N, "summary": "종합 평가"} \`\`\` 를 포함하세요. 한국어로 진행하세요.`;
+    case "multiple-choice":
+      return `당신은 "${topicName}" 분야의 객관식 퀴즈 출제 전문가입니다. 이전 대화를 이어서 진행하세요. 학생의 답을 채점하고 다음 문제를 출제하세요. 정답: \`\`\`json {"score": 10, "maxScore": 10, "passed": true, "feedback": "해설"} \`\`\`, 오답: \`\`\`json {"score": 0, "maxScore": 10, "passed": false, "feedback": "해설"} \`\`\`. 모든 문제 후: \`\`\`json {"type": "final", "totalQuestions": 5, "summary": "종합 평가"} \`\`\`. 한국어로 진행하세요.`;
+    case "short-answer":
+      return `당신은 "${topicName}" 분야의 주관식 퀴즈 출제 전문가입니다. 이전 대화를 이어서 진행하세요. 학생의 답변을 1-10점 척도로 채점하세요. \`\`\`json {"score": N, "maxScore": 10, "passed": true/false, "feedback": "피드백"} \`\`\`. 모든 문제 후: \`\`\`json {"type": "final", "totalQuestions": 5, "summary": "종합 평가"} \`\`\`. 한국어로 진행하세요.`;
+  }
+}

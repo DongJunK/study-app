@@ -1,65 +1,258 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { Plus, BookOpen, TrendingUp, Target, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { TopicCard } from "@/components/custom/TopicCard";
+import { AddTopicDialog } from "@/components/custom/AddTopicDialog";
+import { ResumeCard } from "@/components/custom/ResumeCard";
+import { GrowthCard } from "@/components/custom/GrowthCard";
+import { StatCard } from "@/components/custom/StatCard";
+import { useTopicStore } from "@/stores/topicStore";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { LastSession } from "@/types/session";
+import type { GrowthData } from "@/lib/data/growthManager";
+import type { ApiResult } from "@/types/api";
+
+export default function DashboardPage() {
+  const router = useRouter();
+  const { topics, isLoading, fetchTopics, addTopic, removeTopic } = useTopicStore();
+  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [lastSession, setLastSession] = React.useState<LastSession | null>(null);
+  const [resumeDismissed, setResumeDismissed] = React.useState(false);
+  const [growthData, setGrowthData] = React.useState<GrowthData[]>([]);
+  const [growthLoading, setGrowthLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    fetchTopics();
+  }, [fetchTopics]);
+
+  // Fetch last session
+  React.useEffect(() => {
+    async function fetchLastSession() {
+      try {
+        const res = await fetch("/api/session");
+        const json: ApiResult<LastSession | null> = await res.json();
+        if (json.success && json.data) {
+          setLastSession(json.data);
+        }
+      } catch {
+        // Silently fail
+      }
+    }
+    fetchLastSession();
+  }, []);
+
+  // Fetch growth data
+  React.useEffect(() => {
+    async function fetchGrowthData() {
+      try {
+        const res = await fetch("/api/growth");
+        const json: ApiResult<GrowthData[]> = await res.json();
+        if (json.success) {
+          setGrowthData(json.data);
+        }
+      } catch {
+        // Silently fail
+      } finally {
+        setGrowthLoading(false);
+      }
+    }
+    fetchGrowthData();
+  }, []);
+
+  async function handleAddTopic(name: string) {
+    await addTopic(name);
+  }
+
+  function handleLearn(id: string) {
+    router.push(`/learn?topic=${id}`);
+  }
+
+  function handleTest(id: string) {
+    router.push(`/test?topic=${id}`);
+  }
+
+  async function handleDelete(id: string) {
+    await removeTopic(id);
+  }
+
+  function handleResume(id: string) {
+    router.push(`/learn?topic=${id}&resume=true`);
+  }
+
+  function handleResumeDismiss() {
+    setResumeDismissed(true);
+  }
+
+  const totalWeaknesses = topics.reduce((sum, t) => sum + t.weaknessCount, 0);
+
+  const avgProgress = topics.length > 0
+    ? Math.round(topics.reduce((sum, t) => sum + t.progress, 0) / topics.length)
+    : 0;
+
+  const totalSessionCount = growthData.reduce(
+    (sum, gd) => sum + gd.progressHistory.length,
+    0
+  );
+
+  // Find topic name for last session
+  const lastSessionTopic = lastSession
+    ? topics.find((t) => t.id === lastSession.topicId)
+    : null;
+
+  const showResumeCard = lastSession && lastSessionTopic && !resumeDismissed;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="flex-1">
+      <div className="mx-auto max-w-5xl px-6 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-2xl font-semibold">대시보드</h1>
+          <Button size="sm" className="gap-2" onClick={() => setDialogOpen(true)}>
+            <Plus className="size-4" />
+            새 주제 추가
+          </Button>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* Stat Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <StatCard
+            icon={<BookOpen className="size-5" />}
+            label="학습 주제"
+            value={topics.length}
+            iconClassName="bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
+          />
+          <StatCard
+            icon={<TrendingUp className="size-5" />}
+            label="전체 진행률"
+            value={`${avgProgress}%`}
+            iconClassName="bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
+          />
+          <StatCard
+            icon={<Target className="size-5" />}
+            label="약점 항목"
+            value={totalWeaknesses}
+            iconClassName="bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400"
+          />
+          <StatCard
+            icon={<Clock className="size-5" />}
+            label="학습 세션"
+            value={totalSessionCount}
+            iconClassName="bg-purple-50 text-purple-600 dark:bg-purple-500/10 dark:text-purple-400"
+          />
         </div>
-      </main>
-    </div>
+
+        {/* Resume Card */}
+        {showResumeCard && (
+          <ResumeCard
+            topicName={lastSessionTopic.name}
+            context={lastSession.resumeContext}
+            onResume={() => handleResume(lastSession.topicId)}
+            onDismiss={handleResumeDismiss}
+          />
+        )}
+
+        {/* Loading state */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-56 rounded-xl" />
+            ))}
+          </div>
+        ) : topics.length === 0 ? (
+          /* Empty state - Greeting style */
+          <div className="flex flex-col items-center justify-center gap-5 py-20 text-center">
+            <div className="size-16 rounded-full bg-muted flex items-center justify-center">
+              <Plus className="size-6 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="text-base font-medium text-foreground">아직 학습 주제가 없습니다</p>
+              <p className="mt-1 text-sm text-muted-foreground">첫 번째 주제를 추가해 보세요.</p>
+            </div>
+            <Button size="sm" className="gap-2" onClick={() => setDialogOpen(true)}>
+              <Plus className="size-4" />
+              새 주제 추가
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {topics.map((topic) => (
+              <TopicCard
+                key={topic.id}
+                id={topic.id}
+                name={topic.name}
+                progress={topic.progress}
+                lastStudyDate={topic.lastStudyDate}
+                weaknessCount={topic.weaknessCount}
+                status={topic.status}
+                onLearn={handleLearn}
+                onTest={handleTest}
+                onDelete={handleDelete}
+                onClick={(id) => router.push(`/topic/${id}`)}
+                hasLastSession={lastSession?.topicId === topic.id}
+                lastSessionContext={
+                  lastSession?.topicId === topic.id
+                    ? lastSession.resumeContext
+                    : undefined
+                }
+                onResume={handleResume}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Growth tracking section */}
+        <div className="mt-10">
+          <div className="flex items-center justify-between border-b border-border pb-3 mb-5">
+            <h2 className="text-lg font-semibold">성장 추적</h2>
+          </div>
+          {growthLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {[1, 2].map((i) => (
+                <Skeleton key={i} className="h-44 rounded-xl" />
+              ))}
+            </div>
+          ) : growthData.length === 0 ? (
+            <div className="rounded-xl border border-border bg-card p-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                학습과 테스트를 진행하면 성장 데이터가 여기에 표시됩니다
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {growthData.map((gd) => (
+                <GrowthCard key={gd.topicId} data={gd} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Weakness summary section */}
+        <div className="mt-10">
+          <div className="flex items-center justify-between border-b border-border pb-3 mb-5">
+            <h2 className="text-lg font-semibold">약점 요약</h2>
+          </div>
+          {totalWeaknesses === 0 ? (
+            <div className="rounded-xl border border-border bg-card p-6 text-center">
+              <p className="text-sm text-muted-foreground">아직 약점 항목이 없습니다.</p>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-border bg-card p-6">
+              <p className="text-sm text-muted-foreground">
+                총 <span className="text-amber-600 dark:text-amber-400 font-medium">{totalWeaknesses}개</span>의 약점 항목이 있습니다.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <AddTopicDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSubmit={handleAddTopic}
+      />
+    </main>
   );
 }

@@ -1,4 +1,4 @@
-export type LearningMode = 'socratic' | 'feynman';
+export type LearningMode = 'basic' | 'socratic' | 'feynman';
 export type ContentFormat = 'text' | 'code' | 'diagram' | 'analogy';
 
 export interface Message {

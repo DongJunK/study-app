@@ -136,7 +136,7 @@ export default function QnaPage() {
   }
 
   return (
-    <main className="flex-1 flex flex-col h-screen">
+    <main className="flex flex-1 min-h-0 flex-col">
       {/* Header */}
       <div className="border-b border-border bg-background px-6 py-4">
         <div className="flex items-center gap-3">
@@ -156,9 +156,9 @@ export default function QnaPage() {
       </div>
 
       {messages.length === 0 ? (
-        <div className="flex-1 flex flex-col">
+        <div className="flex flex-1 flex-col min-h-0">
           {/* Empty state */}
-          <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
+          <div className="flex flex-1 min-h-0 flex-col items-center justify-center px-6 gap-6 overflow-y-auto">
             <div className="text-center">
               <div className="flex size-16 items-center justify-center rounded-2xl bg-primary/10 mx-auto mb-4">
                 <Sparkles className="size-8 text-primary" />
@@ -184,8 +184,8 @@ export default function QnaPage() {
             </div>
           </div>
 
-          {/* Input area */}
-          <div className="border-t border-border bg-background p-4">
+          {/* Input area — pinned to bottom */}
+          <div className="shrink-0 border-t border-border bg-background p-4">
             <form
               onSubmit={(e) => { e.preventDefault(); const input = (e.currentTarget.elements.namedItem("qna-input") as HTMLTextAreaElement); const val = input.value.trim(); if (val && !isStreaming) { handleSendMessage(val); input.value = ""; } }}
               className="mx-auto flex max-w-3xl items-end gap-2"
@@ -209,7 +209,7 @@ export default function QnaPage() {
           </div>
         </div>
       ) : (
-        <div className="flex-1 overflow-hidden">
+        <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
           <StreamingChat
             messages={messages}
             isStreaming={isStreaming}

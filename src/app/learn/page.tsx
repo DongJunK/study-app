@@ -377,7 +377,7 @@ function LearnContent() {
 
   if (phase === "diagnosis" && topic) {
     return (
-      <main className="flex flex-1 flex-col overflow-hidden">
+      <main className="flex flex-1 min-h-0 flex-col overflow-hidden">
         <DiagnosisChat
           topicId={topic.id}
           topicName={topic.name}
@@ -432,7 +432,7 @@ function LearnContent() {
 
   if (phase === "roadmap-add" && roadmap && topic) {
     return (
-      <main className="flex flex-1 flex-col overflow-hidden">
+      <main className="flex flex-1 min-h-0 flex-col overflow-hidden">
         <RoadmapAddChat
           topicId={topic.id}
           topicName={topic.name}
@@ -479,7 +479,7 @@ function LearnContent() {
 
   if (phase === "learning" && selectedItem && topic && learningMode) {
     return (
-      <main className="flex flex-1 flex-col overflow-hidden">
+      <main className="flex flex-1 min-h-0 flex-col overflow-hidden">
         <LearningSession
           topicId={topic.id}
           topicName={topic.name}

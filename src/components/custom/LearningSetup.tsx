@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { MessageCircleQuestion, Presentation, Check, History } from "lucide-react";
+import { MessageCircleQuestion, Presentation, Check, History, BookOpen } from "lucide-react";
 import type { LearningMode, ContentFormat } from "@/types/session";
 
 interface LastSessionInfo {
@@ -33,6 +33,12 @@ const MODE_OPTIONS: {
   icon: React.ElementType;
 }[] = [
   {
+    value: "basic",
+    label: "기본형",
+    description: "AI가 개념을 설명하고, 질문하며 자유롭게 대화하는 학습",
+    icon: BookOpen,
+  },
+  {
     value: "socratic",
     label: "소크라테스",
     description: "질문을 통해 스스로 답을 찾아가는 대화형 학습",
@@ -46,7 +52,7 @@ const MODE_OPTIONS: {
   },
 ];
 
-const MODE_LABEL: Record<string, string> = { socratic: "소크라테스", feynman: "파인만 기법" };
+const MODE_LABEL: Record<string, string> = { basic: "기본형", socratic: "소크라테스", feynman: "파인만 기법" };
 const FORMAT_LABEL: Record<string, string> = { text: "텍스트", code: "코드", diagram: "다이어그램", analogy: "비유" };
 
 export function LearningSetup({ topicId, conceptTitle, onStart, onResumeLast }: LearningSetupProps) {
@@ -166,7 +172,7 @@ export function LearningSetup({ topicId, conceptTitle, onStart, onResumeLast }: 
       {/* Learning mode selection */}
       <div className="mb-8">
         <h3 className="mb-3 text-sm font-medium text-muted-foreground">학습 모드</h3>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 grid-cols-1">
           {MODE_OPTIONS.map((opt) => {
             const isSelected = selectedMode === opt.value;
             const Icon = opt.icon;

@@ -252,7 +252,7 @@ export function LearningSession({
   const timerDisplay = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex flex-1 min-h-0 flex-col">
       {/* Top bar */}
       <div className="flex items-center justify-between border-b border-border bg-background/80 px-4 py-2 backdrop-blur-sm">
         <div className="flex items-center gap-3">
@@ -301,16 +301,12 @@ export function LearningSession({
       </div>
 
       {/* Chat */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
         <StreamingChat
           messages={messages}
           isStreaming={isStreaming}
           onSendMessage={handleSendMessage}
-          placeholder={
-            mode === "socratic"
-              ? "질문에 대한 답변을 입력하세요..."
-              : "개념을 설명해보세요..."
-          }
+          placeholder="답변을 입력하세요..."
         />
       </div>
     </div>

@@ -181,7 +181,7 @@ function TestPageContent() {
   }
 
   return (
-    <main className="flex flex-1 flex-col overflow-hidden">
+    <main className="flex flex-1 min-h-0 flex-col overflow-hidden">
       {/* Top bar */}
       <div className="flex items-center gap-3 border-b border-border px-4 py-2">
         <Link

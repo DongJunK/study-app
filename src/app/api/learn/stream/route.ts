@@ -1,5 +1,6 @@
 import { createClaudeStream } from '@/lib/claude/stream';
 import { getSocraticPrompt } from '@/lib/prompts/socratic';
+import { getBasicPrompt } from '@/lib/prompts/basic';
 import { getFeynmanPrompt } from '@/lib/prompts/feynman';
 import type { LearningMode, ContentFormat } from '@/types/session';
 
@@ -34,7 +35,9 @@ export async function POST(request: Request) {
     }
 
     let systemPrompt: string;
-    if (mode === 'socratic') {
+    if (mode === 'basic') {
+      systemPrompt = getBasicPrompt(topicName, conceptTitle, formats);
+    } else if (mode === 'socratic') {
       systemPrompt = getSocraticPrompt(topicName, conceptTitle, formats || ['text']);
     } else {
       systemPrompt = getFeynmanPrompt(topicName, conceptTitle);

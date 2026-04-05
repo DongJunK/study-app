@@ -301,7 +301,7 @@ export function DiagnosisChat({
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex flex-1 min-h-0 flex-col">
       {/* Header */}
       <div className="border-b border-border bg-background/80 px-4 py-3 backdrop-blur-sm">
         <div className="mx-auto max-w-3xl flex items-center justify-between">
@@ -325,7 +325,7 @@ export function DiagnosisChat({
       </div>
 
       {/* Chat */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
         <StreamingChat
           messages={messages.filter((m) => m.role !== "system")}
           isStreaming={isStreaming}

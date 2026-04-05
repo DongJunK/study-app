@@ -10,8 +10,9 @@ import { RoadmapView } from "@/components/custom/RoadmapView";
 import { LearningSetup } from "@/components/custom/LearningSetup";
 import { LearningSession } from "@/components/custom/LearningSession";
 import { SessionSummary } from "@/components/custom/SessionSummary";
+import { RoadmapAddChat } from "@/components/custom/RoadmapAddChat";
 import { useSessionStore } from "@/stores/sessionStore";
-import { Loader2, BookOpen, Play } from "lucide-react";
+import { Loader2, BookOpen, Play, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -28,7 +29,8 @@ type LearnPhase =
   | "roadmap"
   | "setup"
   | "learning"
-  | "summary";
+  | "summary"
+  | "roadmap-add";
 
 interface SummaryData {
   learned: string[];
@@ -186,7 +188,7 @@ function LearnContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topicId]);
 
-  async function handleDiagnosisComplete(diagnosisResult: string) {
+  async function handleDiagnosisComplete(diagnosisResult: string, additionalTopics?: string[]) {
     if (!topicId) return;
 
     // Save diagnosis
@@ -203,17 +205,17 @@ function LearnContent() {
 
     // Generate roadmap
     setPhase("generating-roadmap");
-    await generateRoadmap(diagnosisResult);
+    await generateRoadmap(diagnosisResult, additionalTopics);
   }
 
-  async function generateRoadmap(diagnosisResult: string) {
+  async function generateRoadmap(diagnosisResult: string, additionalTopics?: string[]) {
     if (!topicId) return;
 
     try {
       const res = await fetch(`/api/topics/${topicId}/roadmap`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ diagnosisResult }),
+        body: JSON.stringify({ diagnosisResult, additionalTopics: additionalTopics || [] }),
       });
       const json: ApiResult<Roadmap> = await res.json();
 
@@ -379,7 +381,7 @@ function LearnContent() {
         <DiagnosisChat
           topicId={topic.id}
           topicName={topic.name}
-          onDiagnosisComplete={handleDiagnosisComplete}
+          onDiagnosisComplete={(result, additionalTopics) => handleDiagnosisComplete(result, additionalTopics)}
         />
       </main>
     );
@@ -405,11 +407,17 @@ function LearnContent() {
     return (
       <main className="flex flex-1 flex-col overflow-y-auto">
         <div className="border-b border-border bg-background/80 px-4 py-3 backdrop-blur-sm">
-          <div className="mx-auto max-w-2xl">
-            <h2 className="text-lg font-semibold">{topic.name}</h2>
-            <p className="text-sm text-muted-foreground">
-              학습 로드맵 - 항목을 클릭하여 학습을 시작하세요
-            </p>
+          <div className="mx-auto max-w-2xl flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">{topic.name}</h2>
+              <p className="text-sm text-muted-foreground">
+                학습 로드맵 - 항목을 클릭하여 학습을 시작하세요
+              </p>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => setPhase("roadmap-add")} className="gap-1.5">
+              <Sparkles className="size-3.5" />
+              AI 로드맵 추가
+            </Button>
           </div>
         </div>
         <RoadmapView
@@ -417,6 +425,35 @@ function LearnContent() {
           roadmap={roadmap}
           onAddItem={handleAddRoadmapItem}
           onStartLearning={handleStartLearning}
+        />
+      </main>
+    );
+  }
+
+  if (phase === "roadmap-add" && roadmap && topic) {
+    return (
+      <main className="flex flex-1 flex-col overflow-hidden">
+        <RoadmapAddChat
+          topicId={topic.id}
+          topicName={topic.name}
+          roadmap={roadmap}
+          onAddItems={async (items) => {
+            for (const item of items) {
+              try {
+                await fetch(`/api/topics/${topicId}/roadmap`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ addItem: { title: item.title } }),
+                });
+              } catch { /* ignore */ }
+            }
+            // Refresh roadmap
+            const res = await fetch(`/api/topics/${topicId}/roadmap`);
+            const json = await res.json();
+            if (json.success) setRoadmap(json.data);
+            setPhase("roadmap");
+          }}
+          onBack={() => setPhase("roadmap")}
         />
       </main>
     );

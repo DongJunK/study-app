@@ -178,7 +178,7 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {topics.map((topic) => (
+            {[...topics].sort((a, b) => { const statusOrder = (s: string) => s === "in-progress" ? 0 : s === "new" ? 1 : 2; const so = statusOrder(a.status) - statusOrder(b.status); if (so !== 0) return so; const po = b.progress - a.progress; if (po !== 0) return po; return a.name.localeCompare(b.name); }).map((topic) => (
               <TopicCard
                 key={topic.id}
                 id={topic.id}

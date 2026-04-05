@@ -42,6 +42,7 @@ function TestPageContent() {
   } | null>(null);
   const [testResultId, setTestResultId] = React.useState<string>("");
   const [comparingLoading, setComparingLoading] = React.useState(false);
+  const [allTopicNames, setAllTopicNames] = React.useState<string[]>([]);
 
   // Fetch topic(s)
   React.useEffect(() => {
@@ -56,10 +57,10 @@ function TestPageContent() {
         .then((res) => res.json())
         .then((data) => {
           if (data.success && data.data.length > 0) {
-            const names = data.data.map((t: Topic) => t.name).join(", ");
+            setAllTopicNames(data.data.map((t: Topic) => t.name));
             setTopic({
               id: "all",
-              name: `전체 혼합 (${names})`,
+              name: "전체 주제 테스트",
               progress: 0,
               lastStudyDate: null,
               createdAt: new Date().toISOString(),
@@ -100,8 +101,8 @@ function TestPageContent() {
     return <TestTopicSelector />;
   }
 
-  function handleStartTest(type: TestType, duration: number) {
-    startTest(topic!.id, type, duration);
+  function handleStartTest(type: TestType) {
+    startTest(topic!.id, type, 0);
   }
 
   function handleTestComplete(answers: TestAnswer[]) {
@@ -196,6 +197,7 @@ function TestPageContent() {
           topicId={topic.id}
           topicName={topic.name}
           onStart={handleStartTest}
+          topicNames={allTopicNames}
         />
       )}
 
@@ -207,7 +209,6 @@ function TestPageContent() {
               topicId={topic.id}
               topicName={topic.name}
               type={currentTest.type}
-              duration={currentTest.duration}
               onComplete={handleTestComplete}
             />
           </div>
@@ -232,7 +233,7 @@ function TestPageContent() {
         <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold">테스트 결과</h1>
-            <p className="mt-2 text-muted-foreground">{topic.name}</p>
+            <div className="mt-2"><p className="text-muted-foreground">{topic.name}</p>{allTopicNames.length > 0 && (<div className="flex flex-wrap justify-center gap-1.5 mt-2">{allTopicNames.map((n) => (<span key={n} className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">{n}</span>))}</div>)}</div>
           </div>
 
           {/* Score summary */}
@@ -333,7 +334,7 @@ function TestPageContent() {
         <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold">모범답안 비교</h1>
-            <p className="mt-2 text-muted-foreground">{topic.name}</p>
+            <div className="mt-2"><p className="text-muted-foreground">{topic.name}</p>{allTopicNames.length > 0 && (<div className="flex flex-wrap justify-center gap-1.5 mt-2">{allTopicNames.map((n) => (<span key={n} className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">{n}</span>))}</div>)}</div>
           </div>
 
           <AnswerComparison
@@ -361,7 +362,7 @@ function TestPageContent() {
         <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold">후속 Q&A</h1>
-            <p className="mt-2 text-muted-foreground">{topic.name}</p>
+            <div className="mt-2"><p className="text-muted-foreground">{topic.name}</p>{allTopicNames.length > 0 && (<div className="flex flex-wrap justify-center gap-1.5 mt-2">{allTopicNames.map((n) => (<span key={n} className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">{n}</span>))}</div>)}</div>
           </div>
 
           <AnswerComparison
@@ -408,21 +409,39 @@ export default function TestPage() {
 function TestTopicSelector() {
   const router = useRouter();
   const [topics, setTopics] = React.useState<Topic[]>([]);
+  const [diagnosisMap, setDiagnosisMap] = React.useState<Record<string, { level: string; hasTests: boolean }>>({});
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    async function fetchTopics() {
+    async function fetchData() {
       try {
         const res = await fetch("/api/topics");
         const json: ApiResult<Topic[]> = await res.json();
-        if (json.success) setTopics(json.data);
+        if (json.success) {
+          setTopics(json.data);
+          // Fetch diagnosis info for each topic
+          const diagMap: Record<string, { level: string; hasTests: boolean }> = {};
+          await Promise.all(json.data.map(async (t: Topic) => {
+            try {
+              const detailRes = await fetch(`/api/topics/${t.id}/detail`);
+              const detailJson = await detailRes.json();
+              if (detailJson.success) {
+                diagMap[t.id] = {
+                  level: detailJson.data.diagnosis?.level || "",
+                  hasTests: (detailJson.data.testResults?.length || 0) > 0,
+                };
+              }
+            } catch { /* ignore */ }
+          }));
+          setDiagnosisMap(diagMap);
+        }
       } catch {
         // ignore
       } finally {
         setLoading(false);
       }
     }
-    fetchTopics();
+    fetchData();
   }, []);
 
   if (loading) {
@@ -457,7 +476,29 @@ function TestTopicSelector() {
     );
   }
 
-  const statusLabel: Record<string, string> = { new: "신규", "in-progress": "진행중", completed: "완료" };
+  const statusConfig: Record<string, { label: string; className: string }> = {
+    "in-progress": { label: "진행중", className: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-0" },
+    new: { label: "신규", className: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-0" },
+    completed: { label: "완료", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-0" },
+  };
+
+  const levelLabel: Record<string, string> = { beginner: "초급", intermediate: "중급", advanced: "고급" };
+  const levelColor: Record<string, string> = {
+    beginner: "text-blue-600 dark:text-blue-400",
+    intermediate: "text-amber-600 dark:text-amber-400",
+    advanced: "text-emerald-600 dark:text-emerald-400",
+  };
+
+  // Sort: tested > in-progress > new
+  const sorted = [...topics].sort((a, b) => {
+    const aHasTests = diagnosisMap[a.id]?.hasTests ? 0 : 1;
+    const bHasTests = diagnosisMap[b.id]?.hasTests ? 0 : 1;
+    if (aHasTests !== bHasTests) return aHasTests - bHasTests;
+    const statusOrder = (s: string) => s === "in-progress" ? 0 : s === "new" ? 1 : 2;
+    const so = statusOrder(a.status) - statusOrder(b.status);
+    if (so !== 0) return so;
+    return a.name.localeCompare(b.name);
+  });
 
   return (
     <main className="flex-1">
@@ -479,7 +520,7 @@ function TestTopicSelector() {
                   <Shuffle className="size-5 text-primary" />
                 </div>
                 <div>
-                  <p className="font-medium">전체 주제 혼합 테스트</p>
+                  <p className="font-medium">전체 주제 테스트</p>
                   <p className="text-xs text-muted-foreground">{topics.length}개 주제에서 랜덤 출제</p>
                 </div>
               </div>
@@ -489,33 +530,40 @@ function TestTopicSelector() {
               </Button>
             </div>
           )}
-          {topics.map((t) => (
-            <div
-              key={t.id}
-              className="flex items-center justify-between rounded-xl border border-border bg-card p-4 cursor-pointer transition-colors hover:border-primary/50"
-              onClick={() => router.push(`/test?topic=${t.id}`)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.key === "Enter") router.push(`/test?topic=${t.id}`); }}
-            >
-              <div className="flex items-center gap-4">
-                <div className="size-10 rounded-lg bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center">
-                  <ClipboardCheck className="size-5 text-purple-600 dark:text-purple-400" />
-                </div>
-                <div>
-                  <p className="font-medium">{t.name}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <Badge variant="secondary" className="text-xs">{statusLabel[t.status] ?? t.status}</Badge>
-                    <span className="text-xs text-muted-foreground">{t.progress}% 완료</span>
+          {sorted.map((t) => {
+            const diag = diagnosisMap[t.id];
+            const sc = statusConfig[t.status] || statusConfig["new"];
+            return (
+              <div
+                key={t.id}
+                className="flex items-center justify-between rounded-xl border border-border bg-card p-4 cursor-pointer transition-colors hover:border-primary/50"
+                onClick={() => router.push(`/test?topic=${t.id}`)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === "Enter") router.push(`/test?topic=${t.id}`); }}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="size-10 rounded-lg bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center">
+                    <ClipboardCheck className="size-5 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium">{t.name}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <Badge variant="secondary" className={`text-xs ${sc.className}`}>{sc.label}</Badge>
+                      {diag?.level && (
+                        <span className={`text-xs font-medium ${levelColor[diag.level] || ""}`}>{levelLabel[diag.level] || diag.level}</span>
+                      )}
+                      <span className="text-xs text-muted-foreground">{t.progress}% 완료</span>
+                    </div>
                   </div>
                 </div>
+                <Button size="sm" variant="ghost" className="gap-1.5">
+                  <Play className="size-3.5" />
+                  테스트하기
+                </Button>
               </div>
-              <Button size="sm" variant="ghost" className="gap-1.5">
-                <Play className="size-3.5" />
-                테스트하기
-              </Button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </main>

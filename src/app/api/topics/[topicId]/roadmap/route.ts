@@ -66,7 +66,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { diagnosisResult } = body;
+    const { diagnosisResult, additionalTopics } = body;
 
     if (!diagnosisResult || typeof diagnosisResult !== 'string') {
       return NextResponse.json(
@@ -81,7 +81,7 @@ export async function POST(
       );
     }
 
-    const prompt = getRoadmapPrompt(topic.name, diagnosisResult);
+    const prompt = getRoadmapPrompt(topic.name, diagnosisResult, additionalTopics || []);
     const response = await askClaude(prompt);
 
     // Parse roadmap JSON from response

@@ -12,7 +12,6 @@ interface TestSessionProps {
   topicId: string;
   topicName: string;
   type: TestType;
-  duration: number;
   onComplete: (answers: TestAnswer[]) => void;
 }
 
@@ -20,12 +19,11 @@ export function TestSession({
   topicId,
   topicName,
   type,
-  duration,
   onComplete,
 }: TestSessionProps) {
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = React.useState(false);
-  const [timeLeft, setTimeLeft] = React.useState(duration * 60);
+  const [elapsed, setElapsed] = React.useState(0);
   const [isStarted, setIsStarted] = React.useState(false);
   const [testFinished, setTestFinished] = React.useState(false);
   const questionCountRef = React.useRef(0);
@@ -34,24 +32,14 @@ export function TestSession({
 
   const answers = currentTest?.answers ?? [];
 
-  // Timer
+  // Timer count-up
   React.useEffect(() => {
     if (!isStarted || testFinished) return;
-    if (timeLeft <= 0) {
-      setTestFinished(true);
-      return;
-    }
     const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          setTestFinished(true);
-          return 0;
-        }
-        return prev - 1;
-      });
+      setElapsed((prev) => prev + 1);
     }, 1000);
     return () => clearInterval(interval);
-  }, [isStarted, testFinished, timeLeft]);
+  }, [isStarted, testFinished]);
 
   // Start test - fetch initial question
   React.useEffect(() => {
@@ -240,8 +228,6 @@ export function TestSession({
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   }
 
-  const isTimeLow = timeLeft < 60;
-
   return (
     <div className="flex h-full flex-col">
       {/* Header with timer */}
@@ -250,31 +236,36 @@ export function TestSession({
           {topicName} - {getTypeLabel(type)}
         </h2>
         <div className="flex items-center gap-4">
-          <div
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-mono font-medium ${
-              isTimeLow
-                ? "bg-red-500/10 text-red-600 dark:text-red-400"
-                : "bg-muted text-foreground"
-            }`}
-          >
+          <div className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-mono font-medium bg-muted text-foreground">
             <Clock className="size-3.5" />
-            {formatTime(timeLeft)}
+            {formatTime(elapsed)}
           </div>
-          {testFinished && (
+          <span className="text-xs text-muted-foreground">
+            {answers.length}/10 문제
+          </span>
+          {testFinished ? (
             <Button size="sm" onClick={() => onComplete(answers)}>
               결과 보기
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant={answers.length >= 10 ? "default" : "outline"}
+              onClick={() => {
+                if (answers.length >= 10) {
+                  setTestFinished(true);
+                }
+              }}
+              disabled={answers.length < 10 || isStreaming}
+              title={answers.length < 10 ? `최소 10문제 이상 답변해야 합니다 (현재 ${answers.length}문제)` : ""}
+            >
+              테스트 종료
             </Button>
           )}
         </div>
       </div>
 
-      {/* Time's up notice */}
-      {testFinished && timeLeft <= 0 && (
-        <div className="flex items-center gap-2 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-600 dark:text-amber-400">
-          <AlertCircle className="size-4" />
-          시간이 종료되었습니다.
-        </div>
-      )}
+
 
       {/* Chat area */}
       <div className="flex-1 overflow-hidden">

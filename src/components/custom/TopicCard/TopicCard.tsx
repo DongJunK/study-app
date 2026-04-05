@@ -89,7 +89,7 @@ export function TopicCard({
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Calendar className="size-3" />
-          <span>{lastStudyDate ? lastStudyDate : "아직 학습하지 않음"}</span>
+          <span>{lastStudyDate ? new Date(lastStudyDate).toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : "아직 학습하지 않음"}</span>
         </div>
         {weaknessCount > 0 && (
           <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium">

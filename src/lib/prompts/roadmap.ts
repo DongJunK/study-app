@@ -1,9 +1,15 @@
 export function getRoadmapPrompt(
   topicName: string,
-  diagnosisResult: string
+  diagnosisResult: string,
+  additionalTopics: string[] = []
 ): string {
+  const additionalSection = additionalTopics.length > 0
+    ? `\n\nThe user also wants to learn these additional topics. Include them in the roadmap at appropriate positions:\n${additionalTopics.map((t, i) => `${i + 1}. ${t}`).join("\n")}`
+    : "";
+
   return `Based on this diagnosis for "${topicName}":
 ${diagnosisResult}
+${additionalSection}
 
 Generate a learning roadmap in this EXACT JSON format (wrapped in \`\`\`json code block):
 \`\`\`json
@@ -22,5 +28,6 @@ Rules:
 - 8-15 items total
 - All text in Korean
 - Include a mix of concept learning and practical application
+- If additional topics were requested, integrate them naturally into the learning sequence
 - Return ONLY the JSON, no other text`;
 }

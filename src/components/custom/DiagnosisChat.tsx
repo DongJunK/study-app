@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { StreamingChat } from "@/components/custom/StreamingChat";
 import { useSessionStore } from "@/stores/sessionStore";
 import type { Message } from "@/types/session";
-import { Sparkles, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
+import { DiagnosisResult } from "@/components/custom/DiagnosisResult";
 
 interface DiagnosisChatProps {
   topicId: string;
   topicName: string;
-  onDiagnosisComplete: (result: string) => void;
+  onDiagnosisComplete: (result: string, additionalTopics?: string[]) => void;
 }
 
 export function DiagnosisChat({
@@ -292,10 +293,10 @@ export function DiagnosisChat({
     );
   }
 
-  function handleGenerateRoadmap() {
+  function handleGenerateRoadmap(additionalTopics: string[] = []) {
     if (diagnosisResult) {
       fetch(`/api/topics/${topicId}/diagnosis/session`, { method: "DELETE" }).catch(() => {});
-      onDiagnosisComplete(diagnosisResult);
+      onDiagnosisComplete(diagnosisResult, additionalTopics);
     }
   }
 
@@ -334,32 +335,15 @@ export function DiagnosisChat({
         />
       </div>
 
-      {/* Roadmap generation button */}
-      {diagnosisComplete && (
-        <div className="border-t border-border bg-background p-4">
-          <div className="mx-auto max-w-3xl flex flex-col items-center gap-3">
-            <p className="text-sm text-muted-foreground">
-              수준 진단이 완료되었습니다!
-            </p>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={handleRestart}
-                className="gap-2"
-              >
-                <RotateCcw className="size-4" />
-                다시 진단하기
-              </Button>
-              <Button
-                onClick={handleGenerateRoadmap}
-                className="gap-2"
-                size="lg"
-              >
-                <Sparkles className="size-4" />
-                로드맵 생성
-              </Button>
-            </div>
-          </div>
+      {/* Diagnosis result */}
+      {diagnosisComplete && diagnosisResult && (
+        <div className="flex-1 overflow-y-auto border-t border-border">
+          <DiagnosisResult
+            result={diagnosisResult}
+            topicName={topicName}
+            onGenerateRoadmap={(additionalTopics) => handleGenerateRoadmap(additionalTopics)}
+            onRestart={handleRestart}
+          />
         </div>
       )}
     </div>

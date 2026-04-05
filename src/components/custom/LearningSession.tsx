@@ -19,7 +19,7 @@ interface LearningSessionProps {
   onSessionEnd: (messages: Message[], completed: boolean) => void;
 }
 
-const FIFTEEN_MINUTES = 15 * 60; // seconds
+const NOTIFY_AT = 15 * 60; // 15분 경과 알림
 
 export function LearningSession({
   topicId,
@@ -33,7 +33,8 @@ export function LearningSession({
 }: LearningSessionProps) {
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = React.useState(false);
-  const [timeLeft, setTimeLeft] = React.useState(FIFTEEN_MINUTES);
+  const [elapsed, setElapsed] = React.useState(0);
+  const [notified, setNotified] = React.useState(false);
   const [saveStatus, setSaveStatus] = React.useState<"idle" | "saving" | "saved">("idle");
   const [initialized, setInitialized] = React.useState(false);
 
@@ -47,19 +48,25 @@ export function LearningSession({
     messagesRef.current = messages;
   }, [messages]);
 
-  // Timer countdown
+  // Timer count-up
   React.useEffect(() => {
     const interval = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 0) {
-          clearInterval(interval);
-          return 0;
-        }
-        return prev - 1;
-      });
+      setElapsed((prev) => prev + 1);
     }, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // 15분 경과 알림
+  React.useEffect(() => {
+    if (elapsed >= NOTIFY_AT && !notified) {
+      setNotified(true);
+      if (typeof window !== "undefined") {
+        import("sonner").then(({ toast }) => {
+          toast.info("학습 시간이 15분 경과했습니다", { duration: 5000 });
+        });
+      }
+    }
+  }, [elapsed, notified]);
 
   // Auto-save with 1s debounce
   React.useEffect(() => {
@@ -240,10 +247,9 @@ export function LearningSession({
   }
 
   // Format timer display
-  const minutes = Math.floor(timeLeft / 60);
-  const seconds = timeLeft % 60;
+  const minutes = Math.floor(elapsed / 60);
+  const seconds = elapsed % 60;
   const timerDisplay = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-  const timerWarning = timeLeft <= 60;
 
   return (
     <div className="flex h-full flex-col">
@@ -267,9 +273,7 @@ export function LearningSession({
 
           {/* Timer */}
           <div
-            className={`flex items-center gap-1 text-sm ${
-              timerWarning ? "text-red-500" : "text-muted-foreground"
-            }`}
+            className="flex items-center gap-1 text-sm text-muted-foreground"
           >
             <Clock className="size-3.5" />
             <span className="font-mono">{timerDisplay}</span>

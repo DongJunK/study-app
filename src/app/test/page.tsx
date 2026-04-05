@@ -42,6 +42,7 @@ function TestPageContent() {
   } | null>(null);
   const [testResultId, setTestResultId] = React.useState<string>("");
   const [comparingLoading, setComparingLoading] = React.useState(false);
+  const [isStrategic, setIsStrategic] = React.useState(false);
   const [allTopicNames, setAllTopicNames] = React.useState<string[]>([]);
 
   // Fetch topic(s)
@@ -101,7 +102,8 @@ function TestPageContent() {
     return <TestTopicSelector />;
   }
 
-  function handleStartTest(type: TestType) {
+  function handleStartTest(type: TestType, strategic?: boolean) {
+    setIsStrategic(strategic || false);
     startTest(topic!.id, type, 0);
   }
 
@@ -196,7 +198,7 @@ function TestPageContent() {
         <TestSetup
           topicId={topic.id}
           topicName={topic.name}
-          onStart={handleStartTest}
+          onStart={(type, strategic) => handleStartTest(type, strategic)}
           topicNames={allTopicNames}
         />
       )}
@@ -209,6 +211,7 @@ function TestPageContent() {
               topicId={topic.id}
               topicName={topic.name}
               type={currentTest.type}
+              strategic={isStrategic}
               onComplete={handleTestComplete}
             />
           </div>

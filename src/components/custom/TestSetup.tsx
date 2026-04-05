@@ -8,7 +8,7 @@ import type { TestType } from "@/types/test";
 interface TestSetupProps {
   topicId: string;
   topicName: string;
-  onStart: (type: TestType) => void;
+  onStart: (type: TestType, strategic?: boolean) => void;
   topicNames?: string[];
 }
 
@@ -128,17 +128,27 @@ export function TestSetup({ topicId: _topicId, topicName, onStart, topicNames = 
         </div>
       </div>
 
-      {/* Start button */}
-      <div className="flex justify-center pt-4">
+      {/* Start buttons */}
+      <div className="flex justify-center gap-3 pt-4">
         <Button
+          variant="outline"
           disabled={!selectedType}
-          onClick={() => selectedType && onStart(selectedType)}
-          className="px-8"
+          onClick={() => selectedType && onStart(selectedType, false)}
           size="lg"
         >
-          테스트 시작
+          자유 테스트
+        </Button>
+        <Button
+          disabled={!selectedType}
+          onClick={() => selectedType && onStart(selectedType, true)}
+          size="lg"
+        >
+          실전 테스트
         </Button>
       </div>
+      <p className="text-center text-xs text-muted-foreground mt-2">
+        실전 테스트는 면접 빈출 → 약점 → 학습 내용 → 미학습 중요 개념 순으로 출제됩니다
+      </p>
     </div>
   );
 }

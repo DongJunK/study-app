@@ -9,7 +9,8 @@ function sleep(ms: number): Promise<void> {
 
 export function createClaudeStream(
   prompt: string,
-  systemPrompt?: string
+  systemPrompt?: string,
+  allowedTools?: string[]
 ): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
 
@@ -17,7 +18,8 @@ export function createClaudeStream(
     async start(controller) {
       const args = ['-p', prompt, '--output-format', 'stream-json', '--verbose', '--include-partial-messages'];
       if (systemPrompt) args.push('--append-system-prompt', systemPrompt);
-      args.push('--allowedTools', 'Read');
+      const tools = allowedTools || ['Read'];
+      args.push('--allowedTools', tools.join(','));
 
       const proc = spawn('claude', args);
       let buffer = '';

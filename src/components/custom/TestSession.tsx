@@ -12,6 +12,7 @@ interface TestSessionProps {
   topicId: string;
   topicName: string;
   type: TestType;
+  strategic?: boolean;
   onComplete: (answers: TestAnswer[]) => void;
 }
 
@@ -19,6 +20,7 @@ export function TestSession({
   topicId,
   topicName,
   type,
+  strategic = false,
   onComplete,
 }: TestSessionProps) {
   const [messages, setMessages] = React.useState<Message[]>([]);
@@ -60,6 +62,7 @@ export function TestSession({
           topicName,
           type,
           concepts: [],
+          strategic,
         }),
       });
 

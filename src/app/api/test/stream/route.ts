@@ -1,16 +1,19 @@
 import { createClaudeStream } from '@/lib/claude/stream';
-import { getDeepTestPrompt } from '@/lib/prompts/deep-test';
+import { getDeepTestPrompt, getStrategicTestPrompt } from '@/lib/prompts/deep-test';
 import { getMultipleChoicePrompt, getShortAnswerPrompt } from '@/lib/prompts/quiz';
+import { getWeaknesses } from '@/lib/data/weaknessManager';
+import { getRoadmap } from '@/lib/data/roadmapManager';
 import type { TestType } from '@/types/test';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { topicId, topicName, type, concepts } = body as {
+    const { topicId, topicName, type, concepts, strategic } = body as {
       topicId: string;
       topicName: string;
       type: TestType;
       concepts: string[];
+      strategic?: boolean;
     };
 
     if (!topicId || !type || !topicName) {
@@ -24,24 +27,41 @@ export async function POST(request: Request) {
     }
 
     let systemPrompt: string;
-    switch (type) {
-      case 'deep-learning':
-        systemPrompt = getDeepTestPrompt(topicName, concepts || []);
-        break;
-      case 'multiple-choice':
-        systemPrompt = getMultipleChoicePrompt(topicName, concepts || []);
-        break;
-      case 'short-answer':
-        systemPrompt = getShortAnswerPrompt(topicName, concepts || []);
-        break;
-      default:
-        return Response.json(
-          {
-            success: false,
-            error: { message: 'Invalid test type', code: 'INVALID_TYPE' },
-          },
-          { status: 400 }
-        );
+
+    if (strategic && type === 'deep-learning') {
+      // Fetch weaknesses and learned concepts for strategic test
+      const weaknesses = await getWeaknesses(topicId);
+      const roadmap = await getRoadmap(topicId);
+
+      const weaknessNames = weaknesses
+        .filter(w => w.status !== 'understood')
+        .map(w => w.concept);
+
+      const learnedConcepts = roadmap
+        ? roadmap.items.filter(i => i.status === 'completed').map(i => i.title)
+        : [];
+
+      systemPrompt = getStrategicTestPrompt(topicName, concepts || [], weaknessNames, learnedConcepts);
+    } else {
+      switch (type) {
+        case 'deep-learning':
+          systemPrompt = getDeepTestPrompt(topicName, concepts || []);
+          break;
+        case 'multiple-choice':
+          systemPrompt = getMultipleChoicePrompt(topicName, concepts || []);
+          break;
+        case 'short-answer':
+          systemPrompt = getShortAnswerPrompt(topicName, concepts || []);
+          break;
+        default:
+          return Response.json(
+            {
+              success: false,
+              error: { message: 'Invalid test type', code: 'INVALID_TYPE' },
+            },
+            { status: 400 }
+          );
+      }
     }
 
     const stream = createClaudeStream(

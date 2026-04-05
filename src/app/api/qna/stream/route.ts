@@ -31,6 +31,9 @@ IMPORTANT:
 - Be specific - reference actual data (scores, weakness names, progress percentages)
 - Be encouraging but honest about areas that need improvement
 - If asked about something not in the data, say so clearly
+- You can READ and EDIT files in the data/ directory when the user asks you to modify learning data
+- You CANNOT delete files - only read and edit
+- When editing, preserve the JSON structure and only modify the requested fields
 
 === 사용자 학습 데이터 ===
 ${learningContext}
@@ -38,7 +41,11 @@ ${learningContext}
 
 ${previousMessages ? `=== 이전 대화 ===\n${previousMessages}\n=================` : ''}`;
 
-    const stream = createClaudeStream(prompt, systemPrompt);
+    const dataDir = process.cwd() + '/data';
+    const stream = createClaudeStream(prompt, systemPrompt, [
+      'Read',
+      `Edit(${dataDir}/**)`,
+    ]);
 
     return new Response(stream, {
       headers: {

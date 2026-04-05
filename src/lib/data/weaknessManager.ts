@@ -42,7 +42,7 @@ export async function addWeakness(
 ): Promise<Weakness> {
   const weaknesses = await getWeaknesses(topicId);
   const id = `w-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-  const newWeakness: Weakness = { id, ...weakness };
+  const newWeakness: Weakness = { ...weakness, id, detectedCount: weakness.detectedCount ?? 1 };
   weaknesses.push(newWeakness);
   await saveWeaknesses(topicId, weaknesses);
   return newWeakness;
@@ -61,20 +61,23 @@ export async function classifyWeaknesses(
     );
 
     if (existingIndex >= 0) {
-      // Update existing weakness
+      // Re-detected weakness: increment count + update status
+      const prev = existing[existingIndex];
       existing[existingIndex] = {
-        ...existing[existingIndex],
+        ...prev,
         status: nw.status,
+        detectedCount: (prev.detectedCount || 1) + 1,
         lastUpdated: now,
       };
     } else {
-      // Add new weakness
+      // New weakness
       const id = `w-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       existing.push({
         id,
         topicId,
         concept: nw.concept,
         status: nw.status,
+        detectedCount: 1,
         firstDetected: now,
         lastUpdated: now,
         testHistory: [],

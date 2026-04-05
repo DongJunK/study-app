@@ -1,5 +1,6 @@
 "use client";
 
+import { CircleHelp, CircleAlert, CircleCheck } from "lucide-react";
 import type { WeaknessStatus } from "@/types/weakness";
 
 interface WeaknessTagProps {
@@ -10,30 +11,34 @@ interface WeaknessTagProps {
 
 const STATUS_CONFIG: Record<
   WeaknessStatus,
-  { label: string; bg: string; text: string; border: string }
+  { icon: typeof CircleHelp; bg: string; text: string; border: string; iconColor: string }
 > = {
   unknown: {
-    label: "모른다",
+    icon: CircleAlert,
     bg: "bg-red-500/10",
     text: "text-red-600 dark:text-red-400",
     border: "border-red-500/30",
+    iconColor: "text-red-500",
   },
   confused: {
-    label: "헷갈림",
+    icon: CircleHelp,
     bg: "bg-amber-500/10",
     text: "text-amber-600 dark:text-amber-400",
     border: "border-amber-500/30",
+    iconColor: "text-amber-500",
   },
   understood: {
-    label: "이해함",
+    icon: CircleCheck,
     bg: "bg-emerald-500/10",
     text: "text-emerald-600 dark:text-emerald-400",
     border: "border-emerald-500/30",
+    iconColor: "text-emerald-500",
   },
 };
 
 export function WeaknessTag({ concept, status, onClick }: WeaknessTagProps) {
   const config = STATUS_CONFIG[status];
+  const Icon = config.icon;
 
   return (
     <button
@@ -41,17 +46,8 @@ export function WeaknessTag({ concept, status, onClick }: WeaknessTagProps) {
       onClick={onClick}
       className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-all hover:scale-105 hover:shadow-sm ${config.bg} ${config.text} ${config.border} ${onClick ? "cursor-pointer" : "cursor-default"}`}
     >
-      <span
-        className={`size-2 rounded-full ${
-          status === "unknown"
-            ? "bg-red-500"
-            : status === "confused"
-              ? "bg-amber-500"
-              : "bg-emerald-500"
-        }`}
-      />
+      <Icon className={`size-3.5 ${config.iconColor}`} />
       <span>{concept}</span>
-      <span className="opacity-70">({config.label})</span>
     </button>
   );
 }

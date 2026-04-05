@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getTopic, updateTopic } from '@/lib/data/topicManager';
 import { saveDiagnosis } from '@/lib/data/roadmapManager';
+import { classifyWeaknesses } from '@/lib/data/weaknessManager';
 import type { DiagnosisData } from '@/lib/data/roadmapManager';
 
 export async function POST(
@@ -61,6 +62,15 @@ export async function POST(
     };
 
     await saveDiagnosis(topicId, diagnosisData);
+
+    // Save weaknesses from diagnosis to weaknesses.json
+    if (Array.isArray(weaknesses) && weaknesses.length > 0) {
+      const weaknessItems = weaknesses.map((concept: string) => ({
+        concept,
+        status: 'unknown' as const,
+      }));
+      await classifyWeaknesses(topicId, weaknessItems);
+    }
 
     // Update topic status to in-progress
     await updateTopic(topicId, { status: 'in-progress' });

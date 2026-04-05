@@ -16,7 +16,7 @@ interface LearningSessionProps {
   formats: ContentFormat[];
   roadmapItemId: string | null;
   sessionId: string;
-  onSessionEnd: (messages: Message[]) => void;
+  onSessionEnd: (messages: Message[], completed: boolean) => void;
 }
 
 const FIFTEEN_MINUTES = 15 * 60; // seconds
@@ -232,7 +232,11 @@ export function LearningSession({
   }
 
   function handleEndSession() {
-    onSessionEnd(messagesRef.current);
+    onSessionEnd(messagesRef.current, false);
+  }
+
+  function handleComplete() {
+    onSessionEnd(messagesRef.current, true);
   }
 
   // Format timer display
@@ -279,9 +283,15 @@ export function LearningSession({
             테스트로 전환
           </Link>
 
+          {/* Complete learning button */}
+          <Button size="sm" onClick={handleComplete} disabled={isStreaming} className="gap-1.5">
+            <CheckCircle className="size-3.5" />
+            학습 완료
+          </Button>
+
           {/* End session button */}
           <Button variant="ghost" size="sm" onClick={handleEndSession}>
-            세션 종료
+            나가기
           </Button>
         </div>
       </div>

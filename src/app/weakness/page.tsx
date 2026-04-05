@@ -2,13 +2,14 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { useTopicStore } from "@/stores/topicStore";
 import { useWeaknessStore } from "@/stores/weaknessStore";
 import { WeaknessTag } from "@/components/custom/WeaknessTag";
 import { WeaknessFocusLearning } from "@/components/custom/WeaknessFocusLearning";
 import type { Weakness } from "@/types/weakness";
-import { ArrowLeft, ArrowRight, Sparkles, Target } from "lucide-react";
+import { ArrowRight, Sparkles, Target, History } from "lucide-react";
 
 type PagePhase = "list" | "focus-learning";
 
@@ -38,7 +39,10 @@ function getFirstActionable(
   return null;
 }
 
-export default function WeaknessPage() {
+function WeaknessContent() {
+  const searchParams = useSearchParams();
+  const filterTopicId = searchParams.get("topicId");
+
   const { topics, fetchTopics } = useTopicStore();
   const { weaknesses, isLoading, fetchWeaknesses, updateStatus } =
     useWeaknessStore();
@@ -51,7 +55,6 @@ export default function WeaknessPage() {
   } | null>(null);
   const [completedAnimation, setCompletedAnimation] = React.useState<string | null>(null);
 
-  // Load topics and weaknesses
   React.useEffect(() => {
     fetchTopics();
   }, [fetchTopics]);
@@ -62,18 +65,26 @@ export default function WeaknessPage() {
     }
   }, [topics, fetchWeaknesses]);
 
-  // Derived data
-  const hasAnyWeakness = topics.some(
-    (t) => weaknesses[t.id] && weaknesses[t.id].length > 0
+  // Filter topics based on query param
+  const displayTopics = filterTopicId
+    ? topics.filter((t) => t.id === filterTopicId)
+    : topics;
+
+  const filterTopicName = filterTopicId
+    ? topics.find((t) => t.id === filterTopicId)?.name
+    : null;
+
+  const hasAnyWeakness = displayTopics.some(
+    (t) => weaknesses[t.id]?.some((w) => w.status !== "understood")
   );
 
   const recommendation = React.useMemo(
     () =>
       getFirstActionable(
         weaknesses,
-        topics.map((t) => ({ id: t.id, name: t.name }))
+        displayTopics.map((t) => ({ id: t.id, name: t.name }))
       ),
-    [weaknesses, topics]
+    [weaknesses, displayTopics]
   );
 
   function handleWeaknessClick(
@@ -88,7 +99,6 @@ export default function WeaknessPage() {
   async function handleFocusComplete(passed: boolean) {
     if (!selectedWeakness) return;
 
-    // Find the weakness to update
     const topicWeaknesses = weaknesses[selectedWeakness.topicId] || [];
     const weakness = topicWeaknesses.find(
       (w) => w.concept === selectedWeakness.concept
@@ -108,7 +118,6 @@ export default function WeaknessPage() {
     setSelectedWeakness(null);
   }
 
-  // Focus learning phase
   if (phase === "focus-learning" && selectedWeakness) {
     return (
       <main className="flex flex-1 flex-col">
@@ -122,7 +131,6 @@ export default function WeaknessPage() {
     );
   }
 
-  // Empty state
   if (!isLoading && !hasAnyWeakness) {
     return (
       <main className="flex flex-1 items-center justify-center px-4">
@@ -131,36 +139,64 @@ export default function WeaknessPage() {
             <Target className="size-6 text-muted-foreground" />
           </div>
           <div>
-            <p className="text-base font-medium text-foreground">아직 약점 데이터가 없습니다</p>
+            <p className="text-base font-medium text-foreground">
+              {filterTopicName
+                ? `${filterTopicName}에 약점 데이터가 없습니다`
+                : "아직 약점 데이터가 없습니다"
+              }
+            </p>
             <p className="mt-1 text-sm text-muted-foreground">학습과 테스트를 시작하면 자동으로 분류됩니다.</p>
           </div>
-          <Link href="/" className={buttonVariants({ size: "sm" })}>
-            대시보드로 이동
-          </Link>
+          {filterTopicId ? (
+            <Link href="/weakness" className={buttonVariants({ size: "sm" })}>
+              전체 약점 보기
+            </Link>
+          ) : (
+            <Link href="/" className={buttonVariants({ size: "sm" })}>
+              대시보드로 이동
+            </Link>
+          )}
         </div>
       </main>
     );
   }
 
-  // List phase
   return (
     <main className="flex flex-1 flex-col px-4 py-6">
       <div className="mx-auto w-full max-w-4xl space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-3">
-          <Link
-            href="/"
-            className={buttonVariants({ variant: "ghost", size: "icon" })}
-          >
-            <ArrowLeft className="size-4" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold">약점 추적</h1>
-            <p className="text-sm text-muted-foreground">
-              약점을 클릭하면 집중 학습을 시작합니다
-            </p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold">
+            {filterTopicName ? `${filterTopicName} 약점` : "약점 추적"}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            약점을 클릭하면 집중 학습을 시작합니다
+          </p>
+          {filterTopicId && (
+            <Link href="/weakness" className="text-sm text-primary hover:underline mt-1 inline-block">
+              전체 주제 약점 보기 →
+            </Link>
+          )}
         </div>
+
+        {/* History card - only show when viewing all */}
+        {!filterTopicId && (
+          <Link
+            href="/weakness/history"
+            className="flex items-center justify-between rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/50"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-lg bg-purple-50 dark:bg-purple-500/10">
+                <History className="size-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <p className="font-medium">역대 약점 조회</p>
+                <p className="text-xs text-muted-foreground">해결한 약점 포함 전체 이력 확인</p>
+              </div>
+            </div>
+            <ArrowRight className="size-4 text-muted-foreground" />
+          </Link>
+        )}
 
         {/* Recommendation card */}
         {recommendation && (
@@ -178,7 +214,7 @@ export default function WeaknessPage() {
               </div>
               <button
                 onClick={() => {
-                  const topic = topics.find(
+                  const topic = displayTopics.find(
                     (t) =>
                       weaknesses[t.id]?.some(
                         (w) => w.id === recommendation.weakness.id
@@ -212,20 +248,16 @@ export default function WeaknessPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {topics.map((topic) => {
+            {displayTopics.map((topic) => {
               const topicWeaknesses = weaknesses[topic.id];
               if (!topicWeaknesses || topicWeaknesses.length === 0) return null;
 
-              const sorted = sortWeaknesses(topicWeaknesses);
-              const unknownCount = sorted.filter(
-                (w) => w.status === "unknown"
-              ).length;
-              const confusedCount = sorted.filter(
-                (w) => w.status === "confused"
-              ).length;
-              const understoodCount = sorted.filter(
-                (w) => w.status === "understood"
-              ).length;
+              const active = topicWeaknesses.filter((w) => w.status !== "understood");
+              if (active.length === 0) return null;
+
+              const sorted = sortWeaknesses(active);
+              const unknownCount = active.filter((w) => w.status === "unknown").length;
+              const confusedCount = active.filter((w) => w.status === "confused").length;
 
               return (
                 <div
@@ -238,19 +270,13 @@ export default function WeaknessPage() {
                       {unknownCount > 0 && (
                         <span className="flex items-center gap-1">
                           <span className="size-2 rounded-full bg-red-500" />
-                          {unknownCount}
+                          모름 {unknownCount}
                         </span>
                       )}
                       {confusedCount > 0 && (
                         <span className="flex items-center gap-1">
                           <span className="size-2 rounded-full bg-amber-500" />
-                          {confusedCount}
-                        </span>
-                      )}
-                      {understoodCount > 0 && (
-                        <span className="flex items-center gap-1">
-                          <span className="size-2 rounded-full bg-emerald-500" />
-                          {understoodCount}
+                          헷갈림 {confusedCount}
                         </span>
                       )}
                     </div>
@@ -282,5 +308,22 @@ export default function WeaknessPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function WeaknessPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <main className="flex flex-1 items-center justify-center">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            불러오는 중...
+          </div>
+        </main>
+      }
+    >
+      <WeaknessContent />
+    </React.Suspense>
   );
 }

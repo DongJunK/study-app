@@ -37,12 +37,12 @@ export async function GET(
     let recentSessions: Array<{ id: string; filename: string; date: string; size: number }> = [];
     try {
       const files = await fs.readdir(sessionsDir);
-      const mdFiles = files.filter(f => f.endsWith('.md')).sort().reverse().slice(0, 5);
+      const sessionFiles = files.filter(f => f.endsWith('.json') || f.endsWith('.md')).sort().reverse().slice(0, 5);
       recentSessions = await Promise.all(
-        mdFiles.map(async (f) => {
+        sessionFiles.map(async (f) => {
           const stat = await fs.stat(path.join(sessionsDir, f));
           return {
-            id: f.replace('.md', ''),
+            id: f.replace('.json', '').replace('.md', ''),
             filename: f,
             date: stat.mtime.toISOString(),
             size: stat.size,

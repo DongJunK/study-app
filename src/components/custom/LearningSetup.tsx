@@ -2,13 +2,21 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { MessageCircleQuestion, Presentation, Check } from "lucide-react";
+import { MessageCircleQuestion, Presentation, Check, History } from "lucide-react";
 import type { LearningMode, ContentFormat } from "@/types/session";
+
+interface LastSessionInfo {
+  sessionId: string;
+  mode: LearningMode;
+  formats: ContentFormat[];
+  date: string;
+}
 
 interface LearningSetupProps {
   topicId: string;
   conceptTitle: string;
   onStart: (mode: LearningMode, formats: ContentFormat[]) => void;
+  onResumeLast?: (sessionId: string, mode: LearningMode, formats: ContentFormat[]) => void;
 }
 
 const FORMAT_OPTIONS: { value: ContentFormat; label: string; description: string }[] = [
@@ -38,14 +46,45 @@ const MODE_OPTIONS: {
   },
 ];
 
-export function LearningSetup({ topicId, conceptTitle, onStart }: LearningSetupProps) {
+const MODE_LABEL: Record<string, string> = { socratic: "소크라테스", feynman: "파인만 기법" };
+const FORMAT_LABEL: Record<string, string> = { text: "텍스트", code: "코드", diagram: "다이어그램", analogy: "비유" };
+
+export function LearningSetup({ topicId, conceptTitle, onStart, onResumeLast }: LearningSetupProps) {
   const [selectedFormats, setSelectedFormats] = React.useState<ContentFormat[]>(["text"]);
   const [selectedMode, setSelectedMode] = React.useState<LearningMode | null>(null);
+  const [lastSession, setLastSession] = React.useState<LastSessionInfo | null>(null);
+
+  // Fetch last session for this topic + concept
+  React.useEffect(() => {
+    async function fetchLastSession() {
+      try {
+        const res = await fetch(`/api/topics/${topicId}/detail`);
+        const json = await res.json();
+        if (json.success && json.data.recentSessions?.length > 0) {
+          const latest = json.data.recentSessions[0];
+          // Try to read the full session to get mode/formats
+          const sessionRes = await fetch(`/api/learn/session?topicId=${topicId}&sessionId=${latest.id}`);
+          const sessionJson = await sessionRes.json();
+          if (sessionJson.success && sessionJson.data) {
+            const s = sessionJson.data;
+            setLastSession({
+              sessionId: s.id,
+              mode: s.mode,
+              formats: s.formats,
+              date: s.startedAt || latest.date,
+            });
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+    fetchLastSession();
+  }, [topicId]);
 
   function toggleFormat(format: ContentFormat) {
     setSelectedFormats((prev) => {
       if (prev.includes(format)) {
-        // Keep at least one format selected
         if (prev.length === 1) return prev;
         return prev.filter((f) => f !== format);
       }
@@ -58,6 +97,11 @@ export function LearningSetup({ topicId, conceptTitle, onStart }: LearningSetupP
     onStart(selectedMode, selectedFormats);
   }
 
+  function handleResume() {
+    if (!lastSession || !onResumeLast) return;
+    onResumeLast(lastSession.sessionId, lastSession.mode, lastSession.formats);
+  }
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       {/* Header */}
@@ -67,6 +111,29 @@ export function LearningSetup({ topicId, conceptTitle, onStart }: LearningSetupP
           학습 방식과 콘텐츠 형식을 선택하세요
         </p>
       </div>
+
+      {/* Resume last session */}
+      {lastSession && onResumeLast && (
+        <div className="mb-8 rounded-xl border border-primary/30 bg-primary/5 p-5">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
+                <History className="size-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-medium">지난 학습 이어서 하기</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {MODE_LABEL[lastSession.mode] || lastSession.mode} · {lastSession.formats.map(f => FORMAT_LABEL[f] || f).join(", ")} · {new Date(lastSession.date).toLocaleDateString("ko-KR")}
+                </p>
+              </div>
+            </div>
+            <Button size="sm" onClick={handleResume} className="gap-1.5">
+              <History className="size-3.5" />
+              이어하기
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Content format selection */}
       <div className="mb-8">
@@ -143,7 +210,7 @@ export function LearningSetup({ topicId, conceptTitle, onStart }: LearningSetupP
           onClick={handleStart}
           className="min-w-[200px]"
         >
-          학습 시작
+          새 학습 시작
         </Button>
       </div>
     </div>

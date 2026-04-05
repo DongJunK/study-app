@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
-import { TopNav } from "@/components/layout/TopNav";
+import { SidebarWrapper } from "@/components/layout/SidebarWrapper";
 import "./globals.css";
 
 const geistMono = Geist_Mono({
@@ -26,15 +26,19 @@ export default function RootLayout({
       className={`${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      <body className="min-h-full bg-background text-foreground">
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
           enableSystem
           disableTransitionOnChange
         >
-          <TopNav />
-          <div className="flex flex-1 flex-col">{children}</div>
+          <div className="flex h-screen">
+            <SidebarWrapper />
+            <main className="flex-1 overflow-y-auto">
+              {children}
+            </main>
+          </div>
           <Toaster />
         </ThemeProvider>
       </body>

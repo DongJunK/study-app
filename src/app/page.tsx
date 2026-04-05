@@ -239,10 +239,25 @@ export default function DashboardPage() {
               <p className="text-sm text-muted-foreground">아직 약점 항목이 없습니다.</p>
             </div>
           ) : (
-            <div className="rounded-xl border border-border bg-card p-6">
-              <p className="text-sm text-muted-foreground">
-                총 <span className="text-amber-600 dark:text-amber-400 font-medium">{totalWeaknesses}개</span>의 약점 항목이 있습니다.
-              </p>
+            <div className="space-y-2">
+              {topics.filter(t => t.weaknessCount > 0).map(t => (
+                <div
+                  key={t.id}
+                  className="flex items-center justify-between rounded-xl border border-border bg-card p-4 cursor-pointer transition-colors hover:border-primary/50"
+                  onClick={() => router.push(`/weakness?topicId=${t.id}`)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter") router.push(`/weakness?topicId=${t.id}`); }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-8 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-500/10">
+                      <Target className="size-4 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <span className="text-sm font-medium">{t.name}</span>
+                  </div>
+                  <span className="text-sm text-amber-600 dark:text-amber-400 font-medium">{t.weaknessCount}건</span>
+                </div>
+              ))}
             </div>
           )}
         </div>

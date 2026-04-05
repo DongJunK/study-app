@@ -1,7 +1,7 @@
 import path from 'path';
 import { v4 } from './idUtils';
 import type { LastSession, LearningSession } from '@/types/session';
-import { readJSON, writeJSON, getSessionsDir, ensureDir } from './fileUtils';
+import { readJSON, writeJSON, getSessionsDir, getTopicDir, ensureDir } from './fileUtils';
 
 const LAST_SESSION_FILE = 'last-session.json';
 
@@ -19,8 +19,8 @@ export async function getLastSession(): Promise<LastSession | null> {
 export async function saveLearningSession(
   session: LearningSession
 ): Promise<void> {
-  const sessionsDir = getSessionsDir();
-  const topicSessionsDir = path.join(sessionsDir, session.topicId);
+  // Save under data/topics/{topicId}/sessions/
+  const topicSessionsDir = path.join(getTopicDir(session.topicId), 'sessions');
   await ensureDir(topicSessionsDir);
   await writeJSON(path.join(topicSessionsDir, `${session.id}.json`), session);
 }
@@ -29,9 +29,9 @@ export async function getLearningSession(
   topicId: string,
   sessionId: string
 ): Promise<LearningSession | null> {
-  const sessionsDir = getSessionsDir();
+  const topicSessionsDir = path.join(getTopicDir(topicId), 'sessions');
   return readJSON<LearningSession>(
-    path.join(sessionsDir, topicId, `${sessionId}.json`)
+    path.join(topicSessionsDir, `${sessionId}.json`)
   );
 }
 

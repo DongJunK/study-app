@@ -56,8 +56,50 @@ export async function createTopic(name: string): Promise<Topic> {
 }
 
 export async function getTopic(topicId: string): Promise<Topic | null> {
-  const metaPath = path.join(getTopicDir(topicId), 'meta.json');
-  return readJSON<Topic>(metaPath);
+  const dir = getTopicDir(topicId);
+  const metaPath = path.join(dir, 'meta.json');
+  const topic = await readJSON<Topic>(metaPath);
+  if (!topic) return null;
+
+  // Enrich with live-calculated data
+  try {
+    // Progress from roadmap
+    const roadmap = await readJSON<Roadmap>(path.join(dir, 'roadmap.json'));
+    if (roadmap && roadmap.items.length > 0) {
+      const completed = roadmap.items.filter(i => i.status === 'completed').length;
+      topic.progress = Math.round((completed / roadmap.items.length) * 100);
+    }
+
+    // Weakness count
+    const weaknesses = await readJSON<Array<{ status: string }>>(path.join(dir, 'weaknesses.json'));
+    if (weaknesses) {
+      topic.weaknessCount = weaknesses.filter(w => w.status !== 'understood').length;
+    }
+
+    // Last study date from sessions
+    const sessionsDir = path.join(dir, 'sessions');
+    try {
+      const files = await fs.readdir(sessionsDir);
+      if (files.length > 0) {
+        const stats = await Promise.all(
+          files.filter(f => f.endsWith('.json')).map(async f => {
+            const stat = await fs.stat(path.join(sessionsDir, f));
+            return stat.mtime;
+          })
+        );
+        if (stats.length > 0) {
+          const latest = new Date(Math.max(...stats.map(s => s.getTime())));
+          topic.lastStudyDate = latest.toISOString();
+        }
+      }
+    } catch {
+      // No sessions dir
+    }
+  } catch {
+    // Return topic as-is if enrichment fails
+  }
+
+  return topic;
 }
 
 export async function getAllTopics(): Promise<Topic[]> {

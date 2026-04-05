@@ -263,7 +263,7 @@ function LearnContent() {
     setPhase("learning");
   }
 
-  async function handleSessionEnd(messages: Message[]) {
+  async function handleSessionEnd(messages: Message[], completed: boolean = false) {
     if (!topicId) return;
 
     // Generate summary
@@ -296,10 +296,11 @@ function LearnContent() {
       });
     }
 
-    // Update roadmap item status
-    if (selectedItem && roadmap) {
+    // Update roadmap item status only when explicitly completed
+    console.log("[handleSessionEnd] completed:", completed, "selectedItem:", selectedItem?.id, "roadmap:", !!roadmap);
+    if (completed && selectedItem && roadmap) {
       try {
-        await fetch(`/api/topics/${topicId}/roadmap`, {
+        const patchRes = await fetch(`/api/topics/${topicId}/roadmap`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -309,6 +310,8 @@ function LearnContent() {
             },
           }),
         });
+        const patchJson = await patchRes.json();
+        console.log("[handleSessionEnd] PATCH result:", patchJson);
 
         // Update local roadmap state
         setRoadmap((prev) => {
@@ -426,6 +429,12 @@ function LearnContent() {
           topicId={topic.id}
           conceptTitle={selectedItem.title}
           onStart={handleSetupStart}
+          onResumeLast={(sid, mode, formats) => {
+            setLearningMode(mode);
+            setLearningFormats(formats);
+            setSessionId(sid);
+            setPhase("learning");
+          }}
         />
       </main>
     );

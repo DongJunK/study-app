@@ -5,6 +5,7 @@ import {
   classifyWeaknesses,
   updateWeaknessStatus,
 } from '@/lib/data/weaknessManager';
+import { recordWeaknessChange } from '@/lib/data/growthManager';
 import type { WeaknessStatus } from '@/types/weakness';
 
 export async function GET(
@@ -83,7 +84,22 @@ export async function PATCH(
       );
     }
 
+    // Find current status before update
+    const before = await getWeaknesses(topicId);
+    const target = before.find((w) => w.id === weaknessId);
+    const oldStatus = target?.status ?? "unknown";
+
     await updateWeaknessStatus(topicId, weaknessId, status);
+
+    // Record growth change
+    try {
+      if (target) {
+        await recordWeaknessChange(topicId, target.concept, oldStatus, status);
+      }
+    } catch {
+      // Growth recording failure should not block weakness update
+    }
+
     const updated = await getWeaknesses(topicId);
     return NextResponse.json({ success: true, data: updated });
   } catch {

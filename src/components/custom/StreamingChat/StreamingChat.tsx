@@ -78,6 +78,7 @@ export function StreamingChat({
   const [input, setInput] = React.useState("");
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const isComposingRef = React.useRef(false);
 
   // Auto-scroll to bottom on new messages
   React.useEffect(() => {
@@ -100,7 +101,7 @@ export function StreamingChat({
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !isComposingRef.current) {
       e.preventDefault();
       handleSubmit();
     }
@@ -166,6 +167,8 @@ export function StreamingChat({
             value={input}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
+            onCompositionStart={() => { isComposingRef.current = true; }}
+            onCompositionEnd={() => { isComposingRef.current = false; }}
             placeholder={placeholder}
             disabled={isStreaming || disabled}
             rows={1}

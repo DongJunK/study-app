@@ -13,7 +13,7 @@ import { ScoreIndicator } from "@/components/custom/ScoreIndicator";
 import { useTestStore } from "@/stores/testStore";
 import type { Topic } from "@/types/topic";
 import type { TestType, TestAnswer, TestResult } from "@/types/test";
-import { ArrowLeft, CheckCircle2, XCircle, FileCheck, ClipboardCheck, Play } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle, FileCheck, ClipboardCheck, Play, Shuffle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -43,18 +43,40 @@ function TestPageContent() {
   const [testResultId, setTestResultId] = React.useState<string>("");
   const [comparingLoading, setComparingLoading] = React.useState(false);
 
-  // Fetch topic
+  // Fetch topic(s)
   React.useEffect(() => {
     if (!topicId) {
       setLoading(false);
       return;
     }
-    fetch(`/api/topics/${topicId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) setTopic(data.data);
-      })
-      .finally(() => setLoading(false));
+
+    if (topicId === "all") {
+      // Mixed test: fetch all topics and create a virtual combined topic
+      fetch("/api/topics")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.data.length > 0) {
+            const names = data.data.map((t: Topic) => t.name).join(", ");
+            setTopic({
+              id: "all",
+              name: `전체 혼합 (${names})`,
+              progress: 0,
+              lastStudyDate: null,
+              createdAt: new Date().toISOString(),
+              weaknessCount: 0,
+              status: "in-progress",
+            });
+          }
+        })
+        .finally(() => setLoading(false));
+    } else {
+      fetch(`/api/topics/${topicId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) setTopic(data.data);
+        })
+        .finally(() => setLoading(false));
+    }
   }, [topicId]);
 
   // Reset on unmount
@@ -443,6 +465,30 @@ function TestTopicSelector() {
         <h1 className="text-2xl font-semibold mb-2">테스트</h1>
         <p className="text-sm text-muted-foreground mb-6">테스트할 주제를 선택하세요</p>
         <div className="space-y-3">
+          {/* All topics mixed test */}
+          {topics.length >= 2 && (
+            <div
+              className="flex items-center justify-between rounded-xl border-2 border-primary/30 bg-primary/5 p-4 cursor-pointer transition-colors hover:border-primary/50"
+              onClick={() => router.push("/test?topic=all")}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter") router.push("/test?topic=all"); }}
+            >
+              <div className="flex items-center gap-4">
+                <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Shuffle className="size-5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium">전체 주제 혼합 테스트</p>
+                  <p className="text-xs text-muted-foreground">{topics.length}개 주제에서 랜덤 출제</p>
+                </div>
+              </div>
+              <Button size="sm" variant="ghost" className="gap-1.5">
+                <Play className="size-3.5" />
+                시작하기
+              </Button>
+            </div>
+          )}
           {topics.map((t) => (
             <div
               key={t.id}

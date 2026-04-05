@@ -19,6 +19,7 @@ import type { Weakness } from "@/types/weakness";
 import type { ApiResult } from "@/types/api";
 import type { DiagnosisData } from "@/lib/data/roadmapManager";
 import type { GrowthData } from "@/lib/data/growthManager";
+import { useSettingsStore } from "@/stores/settingsStore";
 
 interface TopicDetailData {
   topic: Topic;
@@ -37,6 +38,7 @@ export default function TopicDetailPage() {
 
   const [data, setData] = React.useState<TopicDetailData | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const { roadmapLockEnabled } = useSettingsStore();
 
   React.useEffect(() => {
     async function fetchDetail() {
@@ -193,23 +195,33 @@ export default function TopicDetailPage() {
                 <BookOpen className="size-4 text-muted-foreground" />
                 학습 이력
               </h3>
-              {recentSessions.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">아직 학습 기록이 없습니다</p>
-              ) : (
-                <div className="space-y-1">
-                  {recentSessions.map((s) => (
-                    <div key={s.id} className="flex items-center justify-between py-2.5 border-b border-border last:border-0">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="size-3.5 text-muted-foreground" />
-                        <span className="text-sm">{new Date(s.date).toLocaleDateString("ko-KR")}</span>
+              {(() => {
+                // Filter out 0KB sessions and group by date
+                const validSessions = recentSessions.filter(s => s.size > 0);
+                if (validSessions.length === 0) {
+                  return <p className="text-sm text-muted-foreground text-center py-4">아직 학습 기록이 없습니다</p>;
+                }
+                const grouped = validSessions.reduce<Record<string, { count: number; totalSize: number }>>((acc, s) => {
+                  const dateKey = new Date(s.date).toLocaleDateString("ko-KR");
+                  if (!acc[dateKey]) acc[dateKey] = { count: 0, totalSize: 0 };
+                  acc[dateKey].count += 1;
+                  acc[dateKey].totalSize += s.size;
+                  return acc;
+                }, {});
+                return (
+                  <div className="space-y-1">
+                    {Object.entries(grouped).map(([date, { count }]) => (
+                      <div key={date} className="flex items-center justify-between py-2.5 border-b border-border last:border-0">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="size-3.5 text-muted-foreground" />
+                          <span className="text-sm">{date}</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">{count}회 학습</span>
                       </div>
-                      <span className="text-xs text-muted-foreground">
-                        {Math.round(s.size / 1024)}KB
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                );
+              })()}
             </section>
 
             {/* Test History */}
@@ -312,12 +324,13 @@ export default function TopicDetailPage() {
                 </div>
                 <div className="space-y-2">
                   {roadmap.items.slice(0, 5).map((item) => {
-                    const statusIcon = item.status === "completed" ? "✓" : item.status === "in-progress" ? "●" : item.status === "available" ? "○" : "🔒";
-                    const statusClass = item.status === "completed" ? "text-emerald-500" : item.status === "in-progress" ? "text-amber-500" : "text-muted-foreground";
+                    const displayStatus = (!roadmapLockEnabled && item.status === "locked") ? "available" : item.status;
+                    const statusIcon = displayStatus === "completed" ? "✓" : displayStatus === "in-progress" ? "●" : "○";
+                    const statusClass = displayStatus === "completed" ? "text-emerald-500" : displayStatus === "in-progress" ? "text-amber-500" : displayStatus === "available" ? "text-blue-500" : "text-muted-foreground";
                     return (
                       <div key={item.id} className="flex items-center gap-3 py-1.5">
                         <span className={`text-sm ${statusClass}`}>{statusIcon}</span>
-                        <span className={`text-sm ${item.status === "locked" ? "text-muted-foreground" : ""}`}>{item.title}</span>
+                        <span className="text-sm">{item.title}</span>
                       </div>
                     );
                   })}

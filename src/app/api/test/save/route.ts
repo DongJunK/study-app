@@ -1,4 +1,5 @@
 import { saveTestResult } from '@/lib/data/testManager';
+import { recordTestScore } from '@/lib/data/growthManager';
 import type { TestResult } from '@/types/test';
 
 export async function POST(request: Request) {
@@ -17,6 +18,13 @@ export async function POST(request: Request) {
     }
 
     await saveTestResult(topicId, result);
+
+    // Record growth data
+    try {
+      await recordTestScore(topicId, result.totalScore, result.maxTotalScore);
+    } catch {
+      // Growth recording failure should not block test save
+    }
 
     return Response.json({ success: true, data: { id: result.id } });
   } catch {

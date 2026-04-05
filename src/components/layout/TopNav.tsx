@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -49,9 +50,14 @@ export function TopNav() {
           })}
         </nav>
 
-        {/* Right side: theme toggle */}
+        {/* Right side: settings */}
         <div className="flex items-center">
-          <ThemeToggle />
+          <Link href="/settings">
+            <Button variant="ghost" size="icon">
+              <Settings className="size-5" />
+              <span className="sr-only">설정</span>
+            </Button>
+          </Link>
         </div>
       </div>
     </header>

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { saveLearningSession } from '@/lib/data/sessionManager';
+import { recordSessionMinutes, recordProgressChange } from '@/lib/data/growthManager';
+import { getTopic } from '@/lib/data/topicManager';
 import type { LearningSession } from '@/types/session';
 
 export async function POST(request: Request) {
@@ -21,6 +23,20 @@ export async function POST(request: Request) {
     }
 
     await saveLearningSession(session);
+
+    // Record growth data
+    try {
+      const messageCount = session.messages?.length ?? 0;
+      const estimatedMinutes = Math.max(1, Math.round(messageCount * 2));
+      await recordSessionMinutes(session.topicId, estimatedMinutes);
+
+      const topic = await getTopic(session.topicId);
+      if (topic) {
+        await recordProgressChange(session.topicId, topic.progress);
+      }
+    } catch {
+      // Growth recording failure should not block session save
+    }
 
     return NextResponse.json({ success: true, data: { id: session.id } });
   } catch {

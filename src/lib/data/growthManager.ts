@@ -140,10 +140,12 @@ export async function recordProgressChange(
   const fileData = await readGrowthFile(topicId);
   const today = new Date().toISOString().split('T')[0];
 
-  fileData.progressHistory.push({
-    date: today,
-    progress,
-  });
+  const existingIndex = fileData.progressHistory.findIndex(p => p.date === today);
+  if (existingIndex >= 0) {
+    fileData.progressHistory[existingIndex].progress = progress;
+  } else {
+    fileData.progressHistory.push({ date: today, progress });
+  }
 
   // Add today to streak dates
   if (!fileData.streakDates.includes(today)) {

@@ -140,18 +140,27 @@ export default function TopicDetailPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => router.push(`/learn?topic=${topicId}`)}>
-                <Play className="size-3.5 mr-1.5" />
-                학습하기
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => router.push(`/test?topic=${topicId}`)}>
-                <ClipboardCheck className="size-3.5 mr-1.5" />
-                테스트하기
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => router.push(`/learn?topic=${topicId}&rediagnose=true`)}>
-                <RotateCcw className="size-3.5 mr-1.5" />
-                수준 재진단
-              </Button>
+              {topic.status === "new" ? (
+                <Button size="sm" onClick={() => router.push(`/learn?topic=${topicId}`)}>
+                  <Play className="size-3.5 mr-1.5" />
+                  수준 진단하기
+                </Button>
+              ) : (
+                <>
+                  <Button size="sm" onClick={() => router.push(`/learn?topic=${topicId}`)}>
+                    <Play className="size-3.5 mr-1.5" />
+                    학습하기
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => router.push(`/test?topic=${topicId}`)}>
+                    <ClipboardCheck className="size-3.5 mr-1.5" />
+                    테스트하기
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => router.push(`/learn?topic=${topicId}&rediagnose=true`)}>
+                    <RotateCcw className="size-3.5 mr-1.5" />
+                    수준 재진단
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>

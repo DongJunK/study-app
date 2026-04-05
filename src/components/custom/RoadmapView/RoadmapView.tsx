@@ -79,10 +79,9 @@ export function RoadmapView({
 
   function isClickable(item: RoadmapItem): boolean {
     if (!roadmapLockEnabled) {
-      // 잠김 비활성화: 모든 항목 학습 가능 (completed 제외)
-      return item.status !== "completed";
+      return true; // 잠김 비활성화: 모든 항목 학습 가능
     }
-    return item.status === "available" || item.status === "in-progress";
+    return item.status === "available" || item.status === "in-progress" || item.status === "completed";
   }
 
   function getDisplayStatus(item: RoadmapItem): RoadmapItem["status"] {
@@ -134,14 +133,6 @@ export function RoadmapView({
                 {item.isCustom && (
                   <Badge variant="outline" className="mt-2 text-[10px] px-1.5 py-0">사용자 추가</Badge>
                 )}
-                {clickable && (
-                  <div className="mt-3 flex justify-end">
-                    <Button size="sm" variant="ghost" className="gap-1 text-xs h-7 px-2">
-                      <Play className="size-3" />
-                      학습 시작
-                    </Button>
-                  </div>
-                )}
               </div>
             );
           })}
@@ -161,7 +152,7 @@ export function RoadmapView({
                 <div
                   key={item.id}
                   className={`group relative flex items-start gap-4 rounded-xl p-3 transition-colors ${
-                    clickable ? "cursor-pointer hover:bg-muted/50" : ""
+                    clickable ? "cursor-pointer hover:bg-muted" : ""
                   } ${displayStatus === "locked" ? "opacity-60" : ""}`}
                   onClick={() => {
                     if (clickable && onStartLearning) onStartLearning(item.id);
@@ -188,9 +179,6 @@ export function RoadmapView({
                       <Badge className={`text-[10px] ${config.color}`}>{config.label}</Badge>
                     </div>
                   </div>
-                  {clickable && (
-                    <span className="hidden text-xs text-muted-foreground group-hover:block">학습 시작</span>
-                  )}
                 </div>
               );
             })}

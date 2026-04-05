@@ -108,22 +108,30 @@ export function TopicCard({
 
       {/* Action buttons */}
       <div className="flex gap-2 mt-auto pt-1">
-        {hasLastSession && onResume ? (
-          <Button
-            size="sm"
-            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
-            onClick={(e) => { stop(e); onResume(id); }}
-          >
-            이어서 학습하기
-          </Button>
-        ) : (
+        {status === "new" ? (
           <Button size="sm" className="flex-1" onClick={(e) => { stop(e); onLearn(id); }}>
-            학습하기
+            수준 진단하기
           </Button>
+        ) : hasLastSession && onResume ? (
+          <>
+            <Button
+              size="sm"
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={(e) => { stop(e); onResume(id); }}
+            >
+              이어서 학습하기
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button size="sm" className="flex-1" onClick={(e) => { stop(e); onLearn(id); }}>
+              학습하기
+            </Button>
+            <Button variant="outline" size="sm" className="flex-1" onClick={(e) => { stop(e); onTest(id); }}>
+              테스트하기
+            </Button>
+          </>
         )}
-        <Button variant="outline" size="sm" className="flex-1" onClick={(e) => { stop(e); onTest(id); }}>
-          테스트하기
-        </Button>
       </div>
     </div>
   );

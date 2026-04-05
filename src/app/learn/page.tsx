@@ -585,7 +585,7 @@ function TopicSelector() {
         <h1 className="text-2xl font-semibold mb-2">학습</h1>
         <p className="text-sm text-muted-foreground mb-6">학습할 주제를 선택하세요</p>
         <div className="space-y-3">
-          {topics.map((t) => (
+          {[...topics].sort((a, b) => { const statusOrder = (s: string) => s === "in-progress" ? 0 : s === "new" ? 1 : 2; const so = statusOrder(a.status) - statusOrder(b.status); if (so !== 0) return so; const po = b.progress - a.progress; if (po !== 0) return po; return a.name.localeCompare(b.name); }).map((t) => (
             <div
               key={t.id}
               className="flex items-center justify-between rounded-xl border border-border bg-card p-4 cursor-pointer transition-colors hover:border-primary/50"

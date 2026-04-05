@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Send } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { Message } from "@/types/session";
 
 interface StreamingChatProps {
@@ -12,60 +13,6 @@ interface StreamingChatProps {
   onSendMessage: (message: string) => void;
   placeholder?: string;
   disabled?: boolean;
-}
-
-function formatContent(content: string): React.ReactNode {
-  // Simple markdown-like rendering: code blocks, bold, inline code
-  const parts = content.split(/(```[\s\S]*?```)/g);
-
-  return parts.map((part, i) => {
-    if (part.startsWith("```") && part.endsWith("```")) {
-      const code = part.slice(3, -3);
-      const firstNewline = code.indexOf("\n");
-      const codeContent = firstNewline >= 0 ? code.slice(firstNewline + 1) : code;
-      return (
-        <pre
-          key={i}
-          className="my-2 overflow-x-auto rounded-lg bg-muted p-3 text-sm"
-        >
-          <code>{codeContent}</code>
-        </pre>
-      );
-    }
-
-    // Split by newlines and render paragraphs
-    return part.split("\n").map((line, j) => {
-      // Bold
-      const boldProcessed = line.split(/(\*\*[^*]+\*\*)/g).map((seg, k) => {
-        if (seg.startsWith("**") && seg.endsWith("**")) {
-          return (
-            <strong key={k}>{seg.slice(2, -2)}</strong>
-          );
-        }
-        // Inline code
-        return seg.split(/(`[^`]+`)/g).map((codeSeg, l) => {
-          if (codeSeg.startsWith("`") && codeSeg.endsWith("`")) {
-            return (
-              <code
-                key={l}
-                className="rounded bg-muted px-1.5 py-0.5 text-sm"
-              >
-                {codeSeg.slice(1, -1)}
-              </code>
-            );
-          }
-          return <React.Fragment key={l}>{codeSeg}</React.Fragment>;
-        });
-      });
-
-      return (
-        <React.Fragment key={`${i}-${j}`}>
-          {j > 0 && <br />}
-          {boldProcessed}
-        </React.Fragment>
-      );
-    });
-  });
 }
 
 export function StreamingChat({
@@ -80,7 +27,6 @@ export function StreamingChat({
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const isComposingRef = React.useRef(false);
 
-  // Auto-scroll to bottom on new messages
   React.useEffect(() => {
     if (scrollRef.current) {
       const el = scrollRef.current;
@@ -94,7 +40,6 @@ export function StreamingChat({
     if (!trimmed || isStreaming || disabled) return;
     onSendMessage(trimmed);
     setInput("");
-    // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
@@ -109,7 +54,6 @@ export function StreamingChat({
 
   function handleInput(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setInput(e.target.value);
-    // Auto-resize textarea
     const ta = e.target;
     ta.style.height = "auto";
     ta.style.height = `${Math.min(ta.scrollHeight, 160)}px`;
@@ -132,8 +76,10 @@ export function StreamingChat({
                     : "bg-card text-foreground border border-border"
                 }`}
               >
-                <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">
-                  {formatContent(msg.content)}
+                <div className="prose prose-sm dark:prose-invert max-w-none break-words leading-relaxed [&_pre]:bg-muted [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:text-sm [&_pre]:overflow-x-auto [&_code]:bg-muted [&_code]:rounded [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-sm [&_table]:text-xs [&_th]:px-3 [&_th]:py-1.5 [&_td]:px-3 [&_td]:py-1.5 [&_th]:border [&_td]:border [&_th]:border-border [&_td]:border-border [&_th]:bg-muted">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {msg.content}
+                  </ReactMarkdown>
                 </div>
               </div>
             </div>

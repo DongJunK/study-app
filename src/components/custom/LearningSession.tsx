@@ -251,6 +251,12 @@ export function LearningSession({
   const seconds = elapsed % 60;
   const timerDisplay = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 
+  const modeLabel = {
+    basic: "기본형",
+    socratic: "소크라테스",
+    feynman: "파인만",
+  };
+
   return (
     <div className="flex flex-1 min-h-0 flex-col">
       {/* Top bar */}
@@ -260,7 +266,7 @@ export function LearningSession({
           <div>
             <span className="text-sm font-medium">{conceptTitle}</span>
             <span className="ml-2 text-xs text-muted-foreground">
-              {mode === "socratic" ? "소크라테스" : "파인만"}
+              {modeLabel[mode]}
             </span>
           </div>
         </div>

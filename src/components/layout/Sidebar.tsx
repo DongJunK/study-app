@@ -41,15 +41,17 @@ export function Sidebar() {
       )}
     >
       {/* Logo */}
-      <div className={cn("flex h-16 items-center border-b border-border px-3", collapsed && "justify-center")}>
+      <div className="flex h-16 items-center border-b border-border">
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br from-emerald-500 to-cyan-500 shadow-md shadow-emerald-500/20 dark:from-emerald-400/70 dark:to-cyan-400/70 dark:shadow-emerald-400/15">
+          <div className="flex w-16 shrink-0 items-center justify-center">
+            <div className="flex size-8 items-center justify-center rounded-[10px] bg-gradient-to-br from-emerald-500 to-cyan-500 shadow-md shadow-emerald-500/20 dark:from-emerald-400/70 dark:to-cyan-400/70 dark:shadow-emerald-400/15">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 21V11" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
               <path d="M12 11C9 11 7 7 9 4C11 4.5 12 7.5 12 11Z" fill="white" opacity="0.9"/>
               <path d="M12 11C15 11 17 7 15 4C13 4.5 12 7.5 12 11Z" fill="white" opacity="0.7"/>
               <path d="M8 21H16" stroke="white" strokeWidth="2" strokeLinecap="round"/>
             </svg>
+            </div>
           </div>
           {!collapsed && (
             <span className="text-base font-bold text-foreground whitespace-nowrap">Seedly</span>
@@ -58,7 +60,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex flex-1 flex-col gap-1 p-2 overflow-visible">
+      <nav className="flex flex-1 flex-col gap-1 py-2 overflow-visible">
         {navItems.map(({ href, label, icon: Icon }) => {
           const isActive = href === "/" ? pathname === "/" : pathname.startsWith(href);
 
@@ -67,14 +69,15 @@ export function Sidebar() {
               key={href}
               href={href}
               className={cn(
-                "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors relative whitespace-nowrap",
+                "group flex items-center rounded-lg py-2.5 text-sm font-medium transition-colors relative whitespace-nowrap mx-2",
                 isActive
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                collapsed && "justify-center px-0"
               )}
             >
-              <Icon className="size-[18px] shrink-0" />
+              <div className="flex w-12 shrink-0 items-center justify-center">
+                <Icon className="size-[18px]" />
+              </div>
               {!collapsed && <span>{label}</span>}
               <NavTooltip label={label} collapsed={collapsed} />
             </Link>
@@ -83,16 +86,17 @@ export function Sidebar() {
       </nav>
 
       {/* Bottom: Settings */}
-      <div className="border-t border-border p-2 overflow-visible">
+      <div className="border-t border-border py-2 overflow-visible">
         <Link
           href="/settings"
           className={cn(
-            "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground relative whitespace-nowrap",
+            "group flex items-center rounded-lg py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground relative whitespace-nowrap mx-2",
             pathname === "/settings" && "bg-primary/10 text-primary",
-            collapsed && "justify-center px-0"
           )}
         >
-          <Settings className="size-[18px] shrink-0" />
+          <div className="flex w-12 shrink-0 items-center justify-center">
+            <Settings className="size-[18px]" />
+          </div>
           {!collapsed && <span>설정</span>}
           <NavTooltip label="설정" collapsed={collapsed} />
         </Link>

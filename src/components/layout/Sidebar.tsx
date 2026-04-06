@@ -43,11 +43,16 @@ export function Sidebar() {
       {/* Logo */}
       <div className={cn("flex h-16 items-center border-b border-border px-3", collapsed && "justify-center")}>
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary font-bold text-primary-foreground text-sm">
-            S
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br from-emerald-500 to-cyan-500 shadow-md shadow-emerald-500/20 dark:from-emerald-400/70 dark:to-cyan-400/70 dark:shadow-emerald-400/15">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 21V11" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+              <path d="M12 11C9 11 7 7 9 4C11 4.5 12 7.5 12 11Z" fill="white" opacity="0.9"/>
+              <path d="M12 11C15 11 17 7 15 4C13 4.5 12 7.5 12 11Z" fill="white" opacity="0.7"/>
+              <path d="M8 21H16" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
           </div>
           {!collapsed && (
-            <span className="text-base font-bold text-foreground whitespace-nowrap">Study</span>
+            <span className="text-base font-bold text-foreground whitespace-nowrap">Seedly</span>
           )}
         </Link>
       </div>

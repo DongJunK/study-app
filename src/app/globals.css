@@ -51,7 +51,35 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --animate-shimmer: shimmer 1.5s infinite linear;
 }
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Staggered reveal for assistant message children */
+.reveal-stagger > * {
+  opacity: 0;
+  animation: fade-in-up 0.4s ease-out forwards;
+}
+.reveal-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.reveal-stagger > *:nth-child(2) { animation-delay: 80ms; }
+.reveal-stagger > *:nth-child(3) { animation-delay: 160ms; }
+.reveal-stagger > *:nth-child(4) { animation-delay: 240ms; }
+.reveal-stagger > *:nth-child(5) { animation-delay: 320ms; }
+.reveal-stagger > *:nth-child(6) { animation-delay: 400ms; }
+.reveal-stagger > *:nth-child(7) { animation-delay: 480ms; }
+.reveal-stagger > *:nth-child(8) { animation-delay: 560ms; }
+.reveal-stagger > *:nth-child(9) { animation-delay: 640ms; }
+.reveal-stagger > *:nth-child(10) { animation-delay: 720ms; }
+.reveal-stagger > *:nth-child(n+11) { animation-delay: 800ms; }
 
 /* Light theme - Greeting style */
 :root {

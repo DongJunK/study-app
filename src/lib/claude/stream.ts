@@ -16,7 +16,7 @@ export function createClaudeStream(
 
   return new ReadableStream<Uint8Array>({
     async start(controller) {
-      const args = ['-p', prompt, '--output-format', 'stream-json', '--verbose', '--include-partial-messages'];
+      const args = ['-p', prompt, '--output-format', 'stream-json', '--verbose'];
       if (systemPrompt) args.push('--append-system-prompt', systemPrompt);
       const tools = allowedTools || ['Read'];
       args.push('--allowedTools', tools.join(','));

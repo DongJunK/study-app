@@ -27,6 +27,31 @@ export function StreamingChat({
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const isComposingRef = React.useRef(false);
   const autoScrollRef = React.useRef(true);
+  const prevStreamingRef = React.useRef(false);
+  const revealIdxRef = React.useRef(-1);
+  const [, forceUpdate] = React.useState(0);
+
+  // Synchronously compute revealIdx before render to avoid flash
+  const wasStreaming = prevStreamingRef.current;
+  if (wasStreaming && !isStreaming) {
+    const visible = messages.filter((m) => m.content.trim() !== "");
+    const lastIdx = visible.length - 1;
+    if (lastIdx >= 0 && visible[lastIdx].role === "assistant") {
+      revealIdxRef.current = lastIdx;
+    }
+  }
+  prevStreamingRef.current = isStreaming;
+
+  // Clear reveal class after animation completes
+  React.useEffect(() => {
+    if (revealIdxRef.current >= 0 && !isStreaming) {
+      const timer = setTimeout(() => {
+        revealIdxRef.current = -1;
+        forceUpdate((n) => n + 1);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [isStreaming]);
 
   function scrollToBottom() {
     if (scrollRef.current) {
@@ -122,41 +147,47 @@ export function StreamingChat({
       {/* Messages area */}
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-6">
         <div className="mx-auto max-w-3xl space-y-4">
-          {messages.filter((msg) => msg.content.trim() !== "").map((msg, idx) => (
-            <div
-              key={idx}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            >
+          {messages
+            .filter((msg) => msg.content.trim() !== "")
+            .filter((msg, idx, arr) => {
+              // Hide the last assistant message while streaming (show indicator instead)
+              if (!isStreaming) return true;
+              if (msg.role !== "assistant") return true;
+              if (idx === arr.length - 1) return false;
+              return true;
+            })
+            .map((msg, idx) => (
               <div
-                className={`max-w-[85%] rounded-2xl p-4 ${
-                  msg.role === "user"
-                    ? "bg-primary/10 text-foreground"
-                    : "bg-card text-foreground border border-border"
-                }`}
+                key={idx}
+                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
-                <div className="prose prose-sm dark:prose-invert max-w-none break-words leading-relaxed [&_pre]:bg-zinc-800 [&_pre]:text-zinc-100 [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:text-sm [&_pre]:overflow-x-auto [&_pre_code]:bg-transparent [&_pre_code]:text-inherit [&_pre_code]:p-0 [&_code]:bg-muted [&_code]:text-foreground [&_code]:rounded [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-sm [&_table]:w-full [&_table]:text-sm [&_table]:border-collapse [&_table]:border [&_table]:border-border [&_table]:rounded-lg [&_table]:overflow-hidden [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:border [&_th]:border-border [&_th]:bg-muted [&_td]:px-3 [&_td]:py-2 [&_td]:border [&_td]:border-border">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {msg.content}
-                  </ReactMarkdown>
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {/* Typing indicator */}
-          {isStreaming &&
-            (messages.length === 0 ||
-              messages[messages.length - 1].role !== "assistant") && (
-              <div className="flex justify-start">
-                <div className="rounded-2xl border border-border bg-card p-4">
-                  <div className="flex items-center gap-1.5">
-                    <span className="size-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:0ms]" />
-                    <span className="size-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:150ms]" />
-                    <span className="size-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:300ms]" />
+                <div
+                  className={`max-w-[85%] rounded-2xl p-4 ${
+                    msg.role === "user"
+                      ? "bg-primary/10 text-foreground"
+                      : "bg-card text-foreground border border-border"
+                  }`}
+                >
+                  <div className={`prose prose-sm dark:prose-invert max-w-none break-words leading-relaxed [&_pre]:bg-zinc-800 [&_pre]:text-zinc-100 [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:text-sm [&_pre]:overflow-x-auto [&_pre_code]:bg-transparent [&_pre_code]:text-inherit [&_pre_code]:p-0 [&_code]:bg-muted [&_code]:text-foreground [&_code]:rounded [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-sm [&_table]:w-full [&_table]:text-sm [&_table]:border-collapse [&_table]:border [&_table]:border-border [&_table]:rounded-lg [&_table]:overflow-hidden [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:border [&_th]:border-border [&_th]:bg-muted [&_td]:px-3 [&_td]:py-2 [&_td]:border [&_td]:border-border${idx === revealIdxRef.current ? " reveal-stagger" : ""}`}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {msg.content}
+                    </ReactMarkdown>
                   </div>
                 </div>
               </div>
-            )}
+            ))}
+
+          {/* Shimmer skeleton — shown while streaming */}
+          {isStreaming && (
+            <div className="flex justify-start">
+              <div className="w-64 rounded-2xl border border-border bg-card p-4">
+                <div className="space-y-2.5">
+                  <div className="h-3 w-[75%] animate-shimmer rounded-md bg-gradient-to-r from-border via-muted-foreground/35 to-border bg-[length:200%_100%]" />
+                  <div className="h-3 w-[50%] animate-shimmer rounded-md bg-gradient-to-r from-border via-muted-foreground/35 to-border bg-[length:200%_100%] [animation-delay:150ms]" />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

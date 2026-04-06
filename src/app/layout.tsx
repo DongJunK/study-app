@@ -11,7 +11,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Study App",
+  title: "Seedly",
   description: "AI 기반 개인 학습 시스템",
 };
 

@@ -26,9 +26,10 @@ export async function POST(request: Request) {
 
     // Record growth data
     try {
-      const messageCount = session.messages?.length ?? 0;
-      const estimatedMinutes = Math.max(1, Math.round(messageCount * 2));
-      await recordSessionMinutes(session.topicId, estimatedMinutes);
+      const minutes = session.elapsedSeconds
+        ? Math.max(1, Math.round(session.elapsedSeconds / 60))
+        : Math.max(1, Math.round((session.messages?.length ?? 0) * 2));
+      await recordSessionMinutes(session.topicId, minutes);
 
       const topic = await getTopic(session.topicId);
       if (topic) {

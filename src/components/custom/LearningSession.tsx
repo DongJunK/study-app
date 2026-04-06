@@ -109,6 +109,7 @@ export function LearningSession({
         endedAt: null,
         summary: null,
         roadmapItemId,
+        elapsedSeconds: elapsed,
       };
 
       await fetch("/api/learn/save", {

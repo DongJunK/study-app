@@ -42,7 +42,7 @@ const statusConfig = {
     icon: Check,
     color: "bg-emerald-500/10 text-emerald-500",
     dot: "bg-emerald-500",
-    cardBorder: "border-emerald-500/30",
+    cardBorder: "border-emerald-500/30 hover:border-emerald-500/60",
   },
 };
 

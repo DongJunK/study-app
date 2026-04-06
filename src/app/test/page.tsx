@@ -205,8 +205,8 @@ function TestPageContent() {
 
       {/* Phase: Testing */}
       {phase === "testing" && currentTest && (
-        <div className="flex flex-1 overflow-hidden">
-          <div className="flex-1 overflow-hidden">
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
             <TestSession
               topicId={topic.id}
               topicName={topic.name}

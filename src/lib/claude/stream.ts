@@ -1,8 +1,5 @@
 import { spawn } from 'child_process';
 
-const CHAR_DELAY_MS = 15; // 글자당 딜레이 (ms)
-const CHUNK_SIZE = 3; // 한번에 보낼 글자 수
-
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -23,37 +20,15 @@ export function createClaudeStream(
 
       const proc = spawn('claude', args);
       let buffer = '';
-
-      // Queue for smoothing output
-      const textQueue: string[] = [];
-      let flushing = false;
       let closed = false;
 
-      async function flushQueue() {
-        if (flushing) return;
-        flushing = true;
-
-        while (textQueue.length > 0 && !closed) {
-          const text = textQueue.shift()!;
-
-          // Split into small chunks for smooth rendering
-          for (let i = 0; i < text.length; i += CHUNK_SIZE) {
-            if (closed) break;
-            const chunk = text.slice(i, i + CHUNK_SIZE);
-            const sseData = `data: ${JSON.stringify({ type: 'text', content: chunk })}\n\n`;
-            try {
-              controller.enqueue(encoder.encode(sseData));
-            } catch {
-              closed = true;
-              break;
-            }
-            if (i + CHUNK_SIZE < text.length) {
-              await sleep(CHAR_DELAY_MS);
-            }
-          }
+      function send(data: string) {
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(data));
+        } catch {
+          closed = true;
         }
-
-        flushing = false;
       }
 
       proc.stdout.on('data', (data: Buffer) => {
@@ -66,29 +41,38 @@ export function createClaudeStream(
           try {
             const event = JSON.parse(line);
 
+            // stream_event with text_delta (available with or without --include-partial-messages)
             if (
               event.type === 'stream_event' &&
               event.event?.delta?.type === 'text_delta' &&
               event.event.delta.text
             ) {
-              textQueue.push(event.event.delta.text);
-              flushQueue();
+              send(`data: ${JSON.stringify({ type: 'text', content: event.event.delta.text })}\n\n`);
             }
 
+            // result event — extract final text and send as done
             if (event.type === 'result' && event.result) {
-              // Wait for queue to drain before sending done
-              const waitAndSendDone = async () => {
-                while (textQueue.length > 0 || flushing) {
-                  await sleep(50);
+              let finalText = '';
+              const result = event.result;
+
+              // Extract text from result object
+              if (typeof result === 'string') {
+                finalText = result;
+              } else if (result.content) {
+                // result.content can be a string or array of content blocks
+                if (typeof result.content === 'string') {
+                  finalText = result.content;
+                } else if (Array.isArray(result.content)) {
+                  finalText = result.content
+                    .filter((block: { type: string; text?: string }) => block.type === 'text' && block.text)
+                    .map((block: { text: string }) => block.text)
+                    .join('\n');
                 }
-                if (!closed) {
-                  const sseData = `data: ${JSON.stringify({ type: 'done', content: event.result })}\n\n`;
-                  try {
-                    controller.enqueue(encoder.encode(sseData));
-                  } catch { /* closed */ }
-                }
-              };
-              waitAndSendDone();
+              }
+
+              if (finalText) {
+                send(`data: ${JSON.stringify({ type: 'done', content: finalText })}\n\n`);
+              }
             }
           } catch {
             // Non-JSON line, skip
@@ -97,22 +81,14 @@ export function createClaudeStream(
       });
 
       proc.stderr.on('data', (data: Buffer) => {
-        if (!closed) {
-          const errorMsg = `data: ${JSON.stringify({ type: 'error', content: data.toString() })}\n\n`;
-          try { controller.enqueue(encoder.encode(errorMsg)); } catch { /* closed */ }
-        }
+        send(`data: ${JSON.stringify({ type: 'error', content: data.toString() })}\n\n`);
       });
 
-      proc.on('close', async () => {
-        // Wait for queue to fully drain
-        while (textQueue.length > 0 || flushing) {
-          await sleep(50);
-        }
+      proc.on('close', () => {
         if (!closed) {
           closed = true;
-          const endMsg = `data: [DONE]\n\n`;
           try {
-            controller.enqueue(encoder.encode(endMsg));
+            controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
             controller.close();
           } catch { /* already closed */ }
         }
@@ -121,9 +97,8 @@ export function createClaudeStream(
       proc.on('error', (err) => {
         if (!closed) {
           closed = true;
-          const errorMsg = `data: ${JSON.stringify({ type: 'error', content: err.message })}\n\n`;
           try {
-            controller.enqueue(encoder.encode(errorMsg));
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', content: err.message })}\n\n`));
             controller.close();
           } catch { /* already closed */ }
         }

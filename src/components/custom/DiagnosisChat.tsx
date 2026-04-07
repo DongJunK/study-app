@@ -252,7 +252,14 @@ export function DiagnosisChat({
               }
             } else if (parsed.type === "done") {
               fullContent = parsed.content || fullContent;
-              if (messageAdded) {
+              if (!messageAdded) {
+                addMessage({
+                  role: "assistant",
+                  content: fullContent,
+                  timestamp: new Date().toISOString(),
+                });
+                messageAdded = true;
+              } else {
                 updateLastAssistantMessage(fullContent);
               }
             }

@@ -5,7 +5,7 @@ import { StreamingChat } from "@/components/custom/StreamingChat";
 import { useTestStore } from "@/stores/testStore";
 import type { Message } from "@/types/session";
 import type { TestType, TestAnswer } from "@/types/test";
-import { Clock, AlertCircle } from "lucide-react";
+import { Clock, AlertCircle, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface TestSessionProps {
@@ -302,6 +302,18 @@ export function TestSession({
         />
       </div>
 
+      {/* Completion banner */}
+      {testFinished && (
+        <div className="shrink-0 border-t border-border bg-primary/5 px-4 py-4">
+          <div className="mx-auto max-w-3xl flex items-center justify-between">
+            <p className="text-sm font-medium">테스트가 완료되었습니다. 마지막 피드백을 확인한 후 결과를 확인하세요.</p>
+            <Button onClick={() => onComplete(answers)} className="gap-1.5">
+              <CheckCircle className="size-4" />
+              결과 보기
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

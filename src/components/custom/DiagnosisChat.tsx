@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { StreamingChat } from "@/components/custom/StreamingChat";
 import { useSessionStore } from "@/stores/sessionStore";
 import type { Message } from "@/types/session";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, CheckCircle } from "lucide-react";
 import { DiagnosisResult } from "@/components/custom/DiagnosisResult";
 
 interface DiagnosisChatProps {
@@ -283,7 +283,7 @@ export function DiagnosisChat({
         if (parsed.level && parsed.strengths && parsed.weaknesses) {
           isComplete = true;
           result = JSON.stringify(parsed);
-          setDiagnosisComplete(true);
+          // Don't set diagnosisComplete yet — let user review last feedback first
           setDiagnosisResult(result);
         }
       } catch {
@@ -320,6 +320,8 @@ export function DiagnosisChat({
     );
   }
 
+  const hasResult = !!diagnosisResult && !diagnosisComplete;
+
   return (
     <div className="flex flex-1 min-h-0 flex-col">
       {/* Header */}
@@ -331,16 +333,28 @@ export function DiagnosisChat({
               {topicName} - AI가 현재 수준을 파악합니다
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRestart}
-            disabled={isStreaming}
-            className="gap-2"
-          >
-            <RotateCcw className="size-3.5" />
-            다시하기
-          </Button>
+          <div className="flex items-center gap-2">
+            {hasResult && (
+              <Button
+                size="sm"
+                onClick={() => setDiagnosisComplete(true)}
+                className="gap-1.5"
+              >
+                <CheckCircle className="size-3.5" />
+                진단 결과 보기
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRestart}
+              disabled={isStreaming}
+              className="gap-2"
+            >
+              <RotateCcw className="size-3.5" />
+              다시하기
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -351,9 +365,22 @@ export function DiagnosisChat({
           isStreaming={isStreaming}
           onSendMessage={handleSendMessage}
           placeholder="답변을 입력하세요..."
-          disabled={diagnosisComplete}
+          disabled={hasResult}
         />
       </div>
+
+      {/* Completion banner */}
+      {hasResult && (
+        <div className="shrink-0 border-t border-border bg-primary/5 px-4 py-4">
+          <div className="mx-auto max-w-3xl flex items-center justify-between">
+            <p className="text-sm font-medium">진단이 완료되었습니다. 마지막 피드백을 확인한 후 결과를 확인하세요.</p>
+            <Button onClick={() => setDiagnosisComplete(true)} className="gap-1.5">
+              <CheckCircle className="size-4" />
+              결과 보기
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

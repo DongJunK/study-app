@@ -159,6 +159,10 @@ export function StreamingChat({
     const ta = e.target;
     ta.style.height = "auto";
     ta.style.height = `${Math.min(ta.scrollHeight, 160)}px`;
+    // Keep messages scrolled to bottom when textarea grows
+    if (autoScrollRef.current) {
+      requestAnimationFrame(scrollToBottom);
+    }
   }
 
   return (
@@ -187,7 +191,7 @@ export function StreamingChat({
                       : "bg-card text-foreground border border-border"
                   }`}
                 >
-                  <div className={`prose prose-sm dark:prose-invert max-w-none break-words leading-relaxed [&_pre]:bg-zinc-800 [&_pre]:text-zinc-100 [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:text-sm [&_pre]:overflow-x-auto [&_pre_code]:bg-transparent [&_pre_code]:text-inherit [&_pre_code]:p-0 [&_code]:bg-muted [&_code]:text-foreground [&_code]:rounded [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-sm [&_table]:w-full [&_table]:text-sm [&_table]:border-collapse [&_table]:border [&_table]:border-border [&_table]:rounded-lg [&_table]:overflow-hidden [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:border [&_th]:border-border [&_th]:bg-muted [&_td]:px-3 [&_td]:py-2 [&_td]:border [&_td]:border-border${idx === revealIdxRef.current ? " reveal-stagger" : ""}`}>
+                  <div className={`prose prose-sm dark:prose-invert max-w-none break-words leading-relaxed [&_pre]:bg-zinc-800 [&_pre]:text-zinc-100 [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:text-sm [&_pre]:overflow-x-auto [&_pre_code]:bg-transparent [&_pre_code]:text-inherit [&_pre_code]:p-0 [&_code]:bg-muted [&_code]:text-foreground [&_code]:rounded [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-sm [&_code]:before:content-none [&_code]:after:content-none [&_table]:w-full [&_table]:text-sm [&_table]:border-collapse [&_table]:border [&_table]:border-border [&_table]:rounded-lg [&_table]:overflow-hidden [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:border [&_th]:border-border [&_th]:bg-muted [&_td]:px-3 [&_td]:py-2 [&_td]:border [&_td]:border-border${idx === revealIdxRef.current ? " reveal-stagger" : ""}`}>
                     {msg.role === "user" ? (
                       <p className="whitespace-pre-wrap">{msg.content}</p>
                     ) : (

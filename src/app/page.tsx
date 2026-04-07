@@ -6,6 +6,13 @@ import { Plus, BookOpen, TrendingUp, Target, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TopicCard } from "@/components/custom/TopicCard";
 import { AddTopicDialog } from "@/components/custom/AddTopicDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ResumeCard } from "@/components/custom/ResumeCard";
 import { GrowthCard } from "@/components/custom/GrowthCard";
 import { StatCard } from "@/components/custom/StatCard";
@@ -79,8 +86,12 @@ export default function DashboardPage() {
     router.push(`/test?topic=${id}`);
   }
 
-  async function handleDelete(id: string) {
-    await removeTopic(id);
+  const [deleteTarget, setDeleteTarget] = React.useState<string | null>(null);
+
+  async function handleDeleteConfirm() {
+    if (!deleteTarget) return;
+    await removeTopic(deleteTarget);
+    setDeleteTarget(null);
   }
 
   function handleResume(id: string) {
@@ -194,7 +205,7 @@ export default function DashboardPage() {
                 status={topic.status}
                 onLearn={handleLearn}
                 onTest={handleTest}
-                onDelete={handleDelete}
+                onDelete={(id) => setDeleteTarget(id)}
                 onClick={(id) => router.push(`/topic/${id}`)}
                 hasLastSession={lastSession?.topicId === topic.id}
                 lastSessionContext={
@@ -273,6 +284,32 @@ export default function DashboardPage() {
         onOpenChange={setDialogOpen}
         onSubmit={handleAddTopic}
       />
+
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <DialogContent className="max-w-[340px] rounded-3xl p-7 text-center">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-base font-bold">삭제하면 되돌릴 수 없어요</DialogTitle>
+            <DialogDescription className="text-[13px] leading-relaxed">
+              이 주제의 진단 결과, 로드맵, 학습 기록이<br />모두 영구적으로 삭제돼요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 flex flex-col gap-2">
+            <Button
+              onClick={handleDeleteConfirm}
+              className="w-full rounded-xl bg-foreground text-background hover:bg-foreground/90"
+            >
+              삭제할게요
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setDeleteTarget(null)}
+              className="w-full rounded-xl text-muted-foreground"
+            >
+              잠깐, 다시 생각해볼게요
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

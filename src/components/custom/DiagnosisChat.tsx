@@ -425,5 +425,12 @@ After all 5-7 questions are answered, provide ONLY a summary in this JSON format
   "summary": "Brief assessment in Korean"
 }
 \`\`\`
+
+WEAKNESS CLASSIFICATION RULES (CRITICAL):
+- "weaknesses" must ONLY include concepts the user answered INCORRECTLY or INCOMPLETELY.
+- If the user gave a correct and complete answer about a concept, that concept MUST go into "strengths", NOT "weaknesses".
+- Do NOT include a concept in weaknesses just because the question was hard or advanced.
+- Base your classification strictly on the user's actual answers, not on general topic difficulty.
+- It is perfectly fine to have an empty weaknesses array [] if the user answered everything correctly.
 ${historySection}`;
 }

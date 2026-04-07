@@ -168,6 +168,22 @@ export async function PATCH(
       existingRoadmap.items.push(newItem);
     }
 
+    // Remove a custom item
+    if (body.removeItem && typeof body.removeItem.itemId === 'string') {
+      const removeIdx = existingRoadmap.items.findIndex(
+        (i) => i.id === body.removeItem.itemId && i.isCustom
+      );
+      if (removeIdx >= 0) {
+        existingRoadmap.items.splice(removeIdx, 1);
+        // Re-order remaining items
+        const sorted = [...existingRoadmap.items].sort((a, b) => a.order - b.order);
+        sorted.forEach((item, idx) => {
+          item.order = idx + 1;
+        });
+        existingRoadmap.items = sorted;
+      }
+    }
+
     // Update a single item's status
     if (body.updateItemStatus && typeof body.updateItemStatus.itemId === 'string') {
       const { itemId, status } = body.updateItemStatus as {

@@ -15,17 +15,17 @@ const STATUS_CONFIG: Record<
 > = {
   unknown: {
     icon: CircleAlert,
-    bg: "bg-red-500/10",
-    text: "text-red-600 dark:text-red-400",
-    border: "border-red-500/30",
-    iconColor: "text-red-500",
-  },
-  confused: {
-    icon: CircleHelp,
     bg: "bg-amber-500/10",
     text: "text-amber-600 dark:text-amber-400",
     border: "border-amber-500/30",
     iconColor: "text-amber-500",
+  },
+  confused: {
+    icon: CircleHelp,
+    bg: "bg-orange-500/10",
+    text: "text-orange-600 dark:text-orange-400",
+    border: "border-orange-500/30",
+    iconColor: "text-orange-500",
   },
   understood: {
     icon: CircleCheck,

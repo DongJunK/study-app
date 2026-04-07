@@ -4,7 +4,14 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Plus, Check, Lock, Circle, Loader2, Play } from "lucide-react";
+import { Plus, Check, Lock, Circle, Loader2, Play, Trash2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useSettingsStore } from "@/stores/settingsStore";
 import type { Roadmap, RoadmapItem } from "@/types/topic";
 
@@ -12,6 +19,7 @@ interface RoadmapViewProps {
   topicId: string;
   roadmap: Roadmap;
   onAddItem?: (title: string) => void;
+  onRemoveItem?: (itemId: string) => void;
   onStartLearning?: (itemId: string) => void;
 }
 
@@ -50,11 +58,13 @@ export function RoadmapView({
   topicId,
   roadmap,
   onAddItem,
+  onRemoveItem,
   onStartLearning,
 }: RoadmapViewProps) {
   const { roadmapViewMode, roadmapLockEnabled } = useSettingsStore();
   const [showAddInput, setShowAddInput] = React.useState(false);
   const [newItemTitle, setNewItemTitle] = React.useState("");
+  const [deleteTargetId, setDeleteTargetId] = React.useState<string | null>(null);
   const inputRef = React.useCallback((node: HTMLInputElement | null) => {
     if (node) node.focus();
   }, []);
@@ -131,7 +141,19 @@ export function RoadmapView({
                   {item.title}
                 </h3>
                 {item.isCustom && (
-                  <Badge variant="outline" className="mt-2 text-[10px] px-1.5 py-0">사용자 추가</Badge>
+                  <div className="mt-2 flex items-center justify-between">
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">사용자 추가</Badge>
+                    {onRemoveItem && item.status !== "completed" && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setDeleteTargetId(item.id); }}
+                        className="rounded-md p-1 text-muted-foreground/60 transition-colors hover:text-red-500 hover:bg-red-500/10"
+                        title="항목 삭제"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             );
@@ -174,6 +196,16 @@ export function RoadmapView({
                       {item.isCustom && (
                         <Badge variant="outline" className="text-[10px] px-1.5 py-0">사용자 추가</Badge>
                       )}
+                      {item.isCustom && onRemoveItem && item.status !== "completed" && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setDeleteTargetId(item.id); }}
+                          className="rounded-md p-0.5 text-muted-foreground/60 transition-colors hover:text-red-500 hover:bg-red-500/10"
+                          title="항목 삭제"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      )}
                     </div>
                     <div className="mt-1">
                       <Badge className={`text-[10px] ${config.color}`}>{config.label}</Badge>
@@ -208,6 +240,37 @@ export function RoadmapView({
           </Button>
         )}
       </div>
+
+      <Dialog open={!!deleteTargetId} onOpenChange={(open) => { if (!open) setDeleteTargetId(null); }}>
+        <DialogContent className="max-w-[340px] rounded-3xl p-7 text-center">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-base font-bold">삭제하면 되돌릴 수 없어요</DialogTitle>
+            <DialogDescription className="text-[13px] leading-relaxed">
+              이 학습 항목이 로드맵에서<br />영구적으로 제거돼요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 flex flex-col gap-2">
+            <Button
+              onClick={() => {
+                if (deleteTargetId && onRemoveItem) {
+                  onRemoveItem(deleteTargetId);
+                }
+                setDeleteTargetId(null);
+              }}
+              className="w-full rounded-xl bg-foreground text-background hover:bg-foreground/90"
+            >
+              삭제할게요
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setDeleteTargetId(null)}
+              className="w-full rounded-xl text-muted-foreground"
+            >
+              잠깐, 다시 생각해볼게요
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

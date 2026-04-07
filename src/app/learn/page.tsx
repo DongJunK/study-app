@@ -249,6 +249,24 @@ function LearnContent() {
     }
   }
 
+  async function handleRemoveRoadmapItem(itemId: string) {
+    if (!topicId || !roadmap) return;
+
+    try {
+      const res = await fetch(`/api/topics/${topicId}/roadmap`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ removeItem: { itemId } }),
+      });
+      const json: ApiResult<Roadmap> = await res.json();
+      if (json.success) {
+        setRoadmap(json.data);
+      }
+    } catch {
+      // Silently fail
+    }
+  }
+
   function handleStartLearning(itemId: string) {
     if (!roadmap) return;
     const item = roadmap.items.find((i) => i.id === itemId);
@@ -424,6 +442,7 @@ function LearnContent() {
           topicId={topic.id}
           roadmap={roadmap}
           onAddItem={handleAddRoadmapItem}
+          onRemoveItem={handleRemoveRoadmapItem}
           onStartLearning={handleStartLearning}
         />
       </main>

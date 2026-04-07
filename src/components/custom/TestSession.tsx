@@ -150,12 +150,29 @@ export function TestSession({
 
         // Check for final summary
         if (parsed.type === "final") {
+          // Multiple-choice: bulk scoring from results array
+          if (Array.isArray(parsed.results)) {
+            for (const r of parsed.results) {
+              questionCountRef.current += 1;
+              const answer: TestAnswer = {
+                questionIndex: r.questionIndex || questionCountRef.current,
+                question: r.question || "",
+                userAnswer: r.userAnswer || "",
+                modelAnswer: r.correctAnswer || "",
+                score: r.score ?? (r.correct ? 10 : 0),
+                maxScore: r.maxScore ?? 10,
+                passed: r.correct ?? r.score >= 7,
+                feedback: r.feedback || "",
+              };
+              addAnswer(answer);
+            }
+          }
           setTestFinished(true);
           return;
         }
 
-        // Check for score response
-        if (typeof parsed.score === "number" && typeof parsed.maxScore === "number") {
+        // Real-time scoring for deep-learning / short-answer (not multiple-choice)
+        if (type !== "multiple-choice" && typeof parsed.score === "number" && typeof parsed.maxScore === "number") {
           questionCountRef.current += 1;
           const answer: TestAnswer = {
             questionIndex: questionCountRef.current,
@@ -243,13 +260,17 @@ export function TestSession({
             <Clock className="size-3.5" />
             {formatTime(elapsed)}
           </div>
-          <span className="text-xs text-muted-foreground">
-            {answers.length}/10 문제
-          </span>
+          {type !== "multiple-choice" && (
+            <span className="text-xs text-muted-foreground">
+              {answers.length}/10 문제
+            </span>
+          )}
           {testFinished ? (
             <Button size="sm" onClick={() => onComplete(answers)}>
               결과 보기
             </Button>
+          ) : type === "multiple-choice" ? (
+            <span className="text-xs text-muted-foreground">퀴즈 진행 중</span>
           ) : (
             <Button
               size="sm"

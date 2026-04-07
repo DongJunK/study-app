@@ -7,6 +7,25 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Message } from "@/types/session";
 
+/**
+ * Replace ```json ... ``` blocks in assistant messages with
+ * extracted feedback text so users see readable content instead of raw JSON.
+ */
+function stripJsonBlocks(text: string): string {
+  return text.replace(/```json\s*\n?([\s\S]*?)```/g, (_match, jsonStr) => {
+    try {
+      const parsed = JSON.parse(jsonStr.trim());
+      // Skip final/summary blocks entirely
+      if (parsed.type === "final") return "";
+      // Extract feedback from scoring blocks
+      if (parsed.feedback) return parsed.feedback;
+    } catch {
+      // Not valid JSON, remove the block
+    }
+    return "";
+  }).trim();
+}
+
 interface StreamingChatProps {
   messages: Message[];
   isStreaming: boolean;
@@ -169,9 +188,13 @@ export function StreamingChat({
                   }`}
                 >
                   <div className={`prose prose-sm dark:prose-invert max-w-none break-words leading-relaxed [&_pre]:bg-zinc-800 [&_pre]:text-zinc-100 [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:text-sm [&_pre]:overflow-x-auto [&_pre_code]:bg-transparent [&_pre_code]:text-inherit [&_pre_code]:p-0 [&_code]:bg-muted [&_code]:text-foreground [&_code]:rounded [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-sm [&_table]:w-full [&_table]:text-sm [&_table]:border-collapse [&_table]:border [&_table]:border-border [&_table]:rounded-lg [&_table]:overflow-hidden [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold [&_th]:border [&_th]:border-border [&_th]:bg-muted [&_td]:px-3 [&_td]:py-2 [&_td]:border [&_td]:border-border${idx === revealIdxRef.current ? " reveal-stagger" : ""}`}>
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {msg.content}
-                    </ReactMarkdown>
+                    {msg.role === "user" ? (
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                    ) : (
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {stripJsonBlocks(msg.content)}
+                      </ReactMarkdown>
+                    )}
                   </div>
                 </div>
               </div>

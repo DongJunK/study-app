@@ -307,6 +307,19 @@ export function DiagnosisChat({
     }
   }
 
+  if (diagnosisComplete && diagnosisResult) {
+    return (
+      <div className="flex flex-1 min-h-0 flex-col overflow-y-auto">
+        <DiagnosisResult
+          result={diagnosisResult}
+          topicName={topicName}
+          onGenerateRoadmap={(additionalTopics) => handleGenerateRoadmap(additionalTopics)}
+          onRestart={handleRestart}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-1 min-h-0 flex-col">
       {/* Header */}
@@ -341,18 +354,6 @@ export function DiagnosisChat({
           disabled={diagnosisComplete}
         />
       </div>
-
-      {/* Diagnosis result */}
-      {diagnosisComplete && diagnosisResult && (
-        <div className="flex-1 overflow-y-auto border-t border-border">
-          <DiagnosisResult
-            result={diagnosisResult}
-            topicName={topicName}
-            onGenerateRoadmap={(additionalTopics) => handleGenerateRoadmap(additionalTopics)}
-            onRestart={handleRestart}
-          />
-        </div>
-      )}
     </div>
   );
 }

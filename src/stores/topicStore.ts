@@ -34,14 +34,14 @@ export const useTopicStore = create<TopicState>((set) => ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
       });
-      const json: ApiResult<Topic> = await res.json();
+      const json = await res.json();
       if (json.success) {
         set((state) => ({ topics: [...state.topics, json.data] }));
         return json.data;
       }
-      return null;
-    } catch {
-      return null;
+      throw new Error(json.error?.message || '주제 추가에 실패했습니다.');
+    } catch (e) {
+      throw e instanceof Error ? e : new Error('주제 추가에 실패했습니다.');
     }
   },
 

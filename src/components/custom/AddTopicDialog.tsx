@@ -41,7 +41,7 @@ export function AddTopicDialog({
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !e.nativeEvent.isComposing) {
       handleSubmit();
     }
   }

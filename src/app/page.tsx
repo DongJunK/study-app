@@ -13,6 +13,7 @@ import { useTopicStore } from "@/stores/topicStore";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { LastSession } from "@/types/session";
 import type { GrowthData } from "@/lib/data/growthManager";
+import { toast } from "sonner";
 import type { ApiResult } from "@/types/api";
 
 export default function DashboardPage() {
@@ -63,7 +64,11 @@ export default function DashboardPage() {
   }, []);
 
   async function handleAddTopic(name: string) {
-    await addTopic(name);
+    try {
+      await addTopic(name);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "주제 추가에 실패했습니다.");
+    }
   }
 
   function handleLearn(id: string) {

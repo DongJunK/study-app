@@ -25,6 +25,15 @@ export async function POST(request: Request) {
       );
     }
 
+    const existing = await getAllTopics();
+    const trimmedName = name.trim().toLowerCase();
+    if (existing.some((t) => t.name.toLowerCase() === trimmedName)) {
+      return NextResponse.json(
+        { success: false, error: { message: '이미 등록된 주제입니다.', code: 'DUPLICATE_TOPIC' } },
+        { status: 409 }
+      );
+    }
+
     const topic = await createTopic(name.trim());
     return NextResponse.json({ success: true, data: topic }, { status: 201 });
   } catch {

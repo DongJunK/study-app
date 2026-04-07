@@ -233,7 +233,7 @@ function TestPageContent() {
 
       {/* Phase: Results */}
       {phase === "results" && (
-        <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8">
+        <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8 overflow-y-auto">
           <div className="text-center">
             <h1 className="text-2xl font-bold">테스트 결과</h1>
             <div className="mt-2"><p className="text-muted-foreground">{topic.name}</p>{allTopicNames.length > 0 && (<div className="flex flex-wrap justify-center gap-1.5 mt-2">{allTopicNames.map((n) => (<span key={n} className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">{n}</span>))}</div>)}</div>
@@ -284,31 +284,76 @@ function TestPageContent() {
                 );
               })()}
 
-              {/* Per-answer breakdown */}
-              <div className="space-y-2">
-                {completedAnswers.map((answer, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3"
-                  >
-                    <span className="text-sm">질문 {idx + 1}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">
-                        {answer.score}/{answer.maxScore}
-                      </span>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                          answer.passed
-                            ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                            : "bg-red-500/10 text-red-600 dark:text-red-400"
-                        }`}
-                      >
-                        {answer.passed ? "통과" : "미달"}
-                      </span>
+              {/* Multiple-choice: question/answer/feedback list */}
+              {currentTest?.type === "multiple-choice" ? (
+                <div className="space-y-4">
+                  {completedAnswers.map((answer, idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-xl border border-border bg-card p-5 space-y-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className="text-sm font-semibold">
+                          문제 {idx + 1}
+                        </h3>
+                        <span
+                          className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            answer.passed
+                              ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                              : "bg-red-500/10 text-red-600 dark:text-red-400"
+                          }`}
+                        >
+                          {answer.passed ? "정답" : "오답"}
+                        </span>
+                      </div>
+                      {answer.question && (
+                        <p className="text-sm text-foreground leading-relaxed">{answer.question}</p>
+                      )}
+                      <div className="flex flex-col gap-1.5 text-sm">
+                        <div className="flex gap-2">
+                          <span className="shrink-0 text-muted-foreground">내 답:</span>
+                          <span className={answer.passed ? "text-foreground" : "text-red-600 dark:text-red-400"}>{answer.userAnswer || "-"}</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <span className="shrink-0 text-muted-foreground">정답:</span>
+                          <span className="text-green-600 dark:text-green-400 font-medium">{answer.modelAnswer || "-"}</span>
+                        </div>
+                      </div>
+                      {answer.feedback && (
+                        <div className="rounded-lg bg-muted/50 px-3 py-2.5">
+                          <p className="text-sm text-muted-foreground leading-relaxed">{answer.feedback}</p>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                /* Non-multiple-choice: existing per-answer breakdown */
+                <div className="space-y-2">
+                  {completedAnswers.map((answer, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3"
+                    >
+                      <span className="text-sm">질문 {idx + 1}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">
+                          {answer.score}/{answer.maxScore}
+                        </span>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                            answer.passed
+                              ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                              : "bg-red-500/10 text-red-600 dark:text-red-400"
+                          }`}
+                        >
+                          {answer.passed ? "통과" : "미달"}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -322,12 +367,14 @@ function TestPageContent() {
             >
               다시 테스트
             </Button>
-            <Button
-              onClick={handleRequestComparison}
-              disabled={comparingLoading}
-            >
-              {comparingLoading ? "분석 중..." : "모범답안 비교"}
-            </Button>
+            {currentTest?.type !== "multiple-choice" && (
+              <Button
+                onClick={handleRequestComparison}
+                disabled={comparingLoading}
+              >
+                {comparingLoading ? "분석 중..." : "모범답안 비교"}
+              </Button>
+            )}
           </div>
         </div>
       )}

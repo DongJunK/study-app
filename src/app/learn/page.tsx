@@ -596,41 +596,80 @@ function TopicSelector() {
     );
   }
 
-  const statusLabel: Record<string, string> = { new: "신규", "in-progress": "진행중", completed: "완료" };
+  const statusConfig: Record<string, { label: string; className: string }> = {
+    new: { label: "신규", className: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-0" },
+    "in-progress": { label: "진행중", className: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-0" },
+    completed: { label: "완료", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-0" },
+  };
+
+  const levelConfig: Record<string, { label: string; className: string }> = {
+    beginner: { label: "초급", className: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-0" },
+    intermediate: { label: "중급", className: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-0" },
+    advanced: { label: "고급", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-0" },
+  };
+
+  const sorted = [...topics].sort((a, b) => {
+    const statusOrder = (s: string) => s === "in-progress" ? 0 : s === "new" ? 1 : 2;
+    const so = statusOrder(a.status) - statusOrder(b.status);
+    if (so !== 0) return so;
+    const po = b.progress - a.progress;
+    if (po !== 0) return po;
+    return a.name.localeCompare(b.name);
+  });
 
   return (
     <main className="flex-1">
-      <div className="mx-auto max-w-3xl px-6 py-8">
-        <h1 className="text-2xl font-semibold mb-2">학습</h1>
-        <p className="text-sm text-muted-foreground mb-6">학습할 주제를 선택하세요</p>
-        <div className="space-y-3">
-          {[...topics].sort((a, b) => { const statusOrder = (s: string) => s === "in-progress" ? 0 : s === "new" ? 1 : 2; const so = statusOrder(a.status) - statusOrder(b.status); if (so !== 0) return so; const po = b.progress - a.progress; if (po !== 0) return po; return a.name.localeCompare(b.name); }).map((t) => (
-            <div
-              key={t.id}
-              className="flex items-center justify-between rounded-xl border border-border bg-card p-4 cursor-pointer transition-colors hover:border-primary/50"
-              onClick={() => router.push(`/learn?topic=${t.id}`)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.key === "Enter") router.push(`/learn?topic=${t.id}`); }}
-            >
-              <div className="flex items-center gap-4">
-                <div className="size-10 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
-                  <BookOpen className="size-5 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div>
-                  <p className="font-medium">{t.name}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <Badge variant="secondary" className="text-xs">{statusLabel[t.status] ?? t.status}</Badge>
-                    <span className="text-xs text-muted-foreground">{t.progress}% 완료</span>
+      <div className="mx-auto max-w-5xl px-6 py-8">
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold">학습</h1>
+          <p className="mt-1 text-sm text-muted-foreground">학습할 주제를 선택하세요</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {sorted.map((t) => {
+            const sc = statusConfig[t.status] || statusConfig["new"];
+            const level = t.level;
+
+            return (
+              <div
+                key={t.id}
+                className="rounded-xl border border-border bg-card p-5 flex flex-col gap-3 transition-colors hover:border-primary/50 cursor-pointer"
+                onClick={() => router.push(`/learn?topic=${t.id}`)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === "Enter") router.push(`/learn?topic=${t.id}`); }}
+              >
+                {/* Name + badges */}
+                <div className="flex flex-col gap-1.5">
+                  <h3 className="text-base font-semibold leading-tight">{t.name}</h3>
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="secondary" className={`w-fit rounded-full px-2.5 py-0.5 text-xs font-medium ${sc.className}`}>
+                      {sc.label}
+                    </Badge>
+                    {level && levelConfig[level] && (
+                      <Badge variant="secondary" className={`w-fit rounded-full px-2.5 py-0.5 text-xs font-medium ${levelConfig[level].className}`}>
+                        {levelConfig[level].label}
+                      </Badge>
+                    )}
                   </div>
                 </div>
+
+                {/* Progress */}
+                <div className="flex items-center gap-3">
+                  <Progress value={t.progress} className="h-1.5 flex-1" />
+                  <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{t.progress}%</span>
+                </div>
+
+                {/* Meta */}
+                {t.weaknessCount > 0 && (
+                  <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium">
+                    <Sparkles className="size-3" />
+                    <span>약점 {t.weaknessCount}개</span>
+                  </div>
+                )}
               </div>
-              <Button size="sm" variant="ghost" className="gap-1.5">
-                <Play className="size-3.5" />
-                학습하기
-              </Button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </main>

@@ -615,10 +615,6 @@ function TestTopicSelector() {
                 <p className="text-xs text-muted-foreground">{topics.length}개 주제에서 랜덤 출제</p>
               </div>
             </div>
-            <Button size="sm" variant="ghost" className="gap-1.5">
-              <Play className="size-3.5" />
-              시작하기
-            </Button>
           </div>
         )}
 
@@ -652,9 +648,6 @@ function TestTopicSelector() {
                       )}
                     </div>
                   </div>
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-purple-50 dark:bg-purple-500/10">
-                    <ClipboardCheck className="size-4.5 text-purple-600 dark:text-purple-400" />
-                  </div>
                 </div>
 
                 {/* Progress */}
@@ -677,13 +670,6 @@ function TestTopicSelector() {
                   )}
                 </div>
 
-                {/* Action */}
-                <div className="mt-auto pt-1">
-                  <Button size="sm" className="w-full gap-1.5" onClick={(e) => { e.stopPropagation(); router.push(`/test?topic=${t.id}`); }}>
-                    <Play className="size-3.5" />
-                    테스트하기
-                  </Button>
-                </div>
               </div>
             );
           })}

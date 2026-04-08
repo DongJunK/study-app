@@ -9,7 +9,8 @@ import { useWeaknessStore } from "@/stores/weaknessStore";
 import { WeaknessTag } from "@/components/custom/WeaknessTag";
 import { WeaknessFocusLearning } from "@/components/custom/WeaknessFocusLearning";
 import type { Weakness } from "@/types/weakness";
-import { ArrowRight, Sparkles, Target, History } from "lucide-react";
+import { ArrowRight, Target, History, BookOpen } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 type PagePhase = "list" | "focus-learning";
 
@@ -19,24 +20,6 @@ function sortWeaknesses(weaknesses: Weakness[]): Weakness[] {
   return [...weaknesses].sort(
     (a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]
   );
-}
-
-function getFirstActionable(
-  allWeaknesses: Record<string, Weakness[]>,
-  topics: Array<{ id: string; name: string }>
-): { weakness: Weakness; topicName: string } | null {
-  for (const topic of topics) {
-    const weaknesses = allWeaknesses[topic.id];
-    if (!weaknesses) continue;
-    const sorted = sortWeaknesses(weaknesses);
-    const actionable = sorted.find(
-      (w) => w.status === "unknown" || w.status === "confused"
-    );
-    if (actionable) {
-      return { weakness: actionable, topicName: topic.name };
-    }
-  }
-  return null;
 }
 
 function WeaknessContent() {
@@ -54,6 +37,7 @@ function WeaknessContent() {
     concept: string;
   } | null>(null);
   const [completedAnimation, setCompletedAnimation] = React.useState<string | null>(null);
+  const [topicQueue, setTopicQueue] = React.useState<{ topicId: string; topicName: string; concepts: string[] } | null>(null);
 
   React.useEffect(() => {
     fetchTopics();
@@ -75,16 +59,7 @@ function WeaknessContent() {
     : null;
 
   const hasAnyWeakness = displayTopics.some(
-    (t) => weaknesses[t.id]?.some((w) => w.status !== "understood")
-  );
-
-  const recommendation = React.useMemo(
-    () =>
-      getFirstActionable(
-        weaknesses,
-        displayTopics.map((t) => ({ id: t.id, name: t.name }))
-      ),
-    [weaknesses, displayTopics]
+    (t) => weaknesses[t.id]?.length > 0
   );
 
   function handleWeaknessClick(
@@ -93,6 +68,16 @@ function WeaknessContent() {
     concept: string
   ) {
     setSelectedWeakness({ topicId, topicName, concept });
+    setPhase("focus-learning");
+  }
+
+  function handleTopicAllLearn(topicId: string, topicName: string) {
+    const topicWeaknesses = weaknesses[topicId] || [];
+    const concepts = sortWeaknesses(topicWeaknesses).map((w) => w.concept);
+    if (concepts.length === 0) return;
+
+    setTopicQueue({ topicId, topicName, concepts: concepts.slice(1) });
+    setSelectedWeakness({ topicId, topicName, concept: concepts[0] });
     setPhase("focus-learning");
   }
 
@@ -114,6 +99,15 @@ function WeaknessContent() {
       }
     }
 
+    // 주제 전체 학습 큐가 있으면 다음 약점으로
+    if (topicQueue && topicQueue.concepts.length > 0) {
+      const [next, ...rest] = topicQueue.concepts;
+      setTopicQueue({ ...topicQueue, concepts: rest });
+      setSelectedWeakness({ topicId: topicQueue.topicId, topicName: topicQueue.topicName, concept: next });
+      return;
+    }
+
+    setTopicQueue(null);
     setPhase("list");
     setSelectedWeakness(null);
   }
@@ -198,44 +192,6 @@ function WeaknessContent() {
           </Link>
         )}
 
-        {/* Recommendation card */}
-        {recommendation && (
-          <div className="rounded-xl border-2 border-primary bg-primary/5 p-5">
-            <div className="flex items-center gap-2 text-sm font-medium text-primary">
-              <Sparkles className="size-4" />
-              이것부터 하세요
-            </div>
-            <div className="mt-3 flex items-center justify-between">
-              <div>
-                <p className="font-semibold">{recommendation.weakness.concept}</p>
-                <p className="text-sm text-muted-foreground">
-                  {recommendation.topicName}
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  const topic = displayTopics.find(
-                    (t) =>
-                      weaknesses[t.id]?.some(
-                        (w) => w.id === recommendation.weakness.id
-                      )
-                  );
-                  if (topic) {
-                    handleWeaknessClick(
-                      topic.id,
-                      topic.name,
-                      recommendation.weakness.concept
-                    );
-                  }
-                }}
-                className={buttonVariants({ size: "sm" }) + " gap-1.5"}
-              >
-                학습 시작
-                <ArrowRight className="size-3.5" />
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Weakness list by topic */}
         {isLoading ? (
@@ -252,12 +208,10 @@ function WeaknessContent() {
               const topicWeaknesses = weaknesses[topic.id];
               if (!topicWeaknesses || topicWeaknesses.length === 0) return null;
 
-              const active = topicWeaknesses.filter((w) => w.status !== "understood");
-              if (active.length === 0) return null;
-
-              const sorted = sortWeaknesses(active);
-              const unknownCount = active.filter((w) => w.status === "unknown").length;
-              const confusedCount = active.filter((w) => w.status === "confused").length;
+              const sorted = sortWeaknesses(topicWeaknesses);
+              const unknownCount = topicWeaknesses.filter((w) => w.status === "unknown").length;
+              const confusedCount = topicWeaknesses.filter((w) => w.status === "confused").length;
+              const understoodCount = topicWeaknesses.filter((w) => w.status === "understood").length;
 
               return (
                 <div
@@ -265,7 +219,18 @@ function WeaknessContent() {
                   className="rounded-xl border border-border bg-card p-5"
                 >
                   <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold">{topic.name}</h2>
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-lg font-semibold">{topic.name}</h2>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs h-7"
+                        onClick={() => handleTopicAllLearn(topic.id, topic.name)}
+                      >
+                        <BookOpen className="size-3.5" />
+                        전체 학습
+                      </Button>
+                    </div>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       {unknownCount > 0 && (
                         <span className="flex items-center gap-1">
@@ -277,6 +242,12 @@ function WeaknessContent() {
                         <span className="flex items-center gap-1">
                           <span className="size-2 rounded-full bg-amber-500" />
                           헷갈림 {confusedCount}
+                        </span>
+                      )}
+                      {understoodCount > 0 && (
+                        <span className="flex items-center gap-1">
+                          <span className="size-2 rounded-full bg-emerald-500" />
+                          이해함 {understoodCount}
                         </span>
                       )}
                     </div>

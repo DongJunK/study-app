@@ -33,7 +33,7 @@ export function Sidebar() {
   React.useEffect(() => { setMounted(true); }, []);
 
   React.useEffect(() => {
-    fetch("/api/interview/check")
+    fetch("/api/prep/check")
       .then(res => res.json())
       .then(data => {
         if (data.success && data.data.available) {
@@ -97,10 +97,10 @@ export function Sidebar() {
         })}
         {interviewAvailable && (
           <Link
-            href="/interview"
+            href="/prep"
             className={cn(
               "group flex items-center rounded-lg py-2.5 text-sm font-medium transition-colors relative whitespace-nowrap mx-2",
-              pathname.startsWith("/interview")
+              pathname.startsWith("/prep")
                 ? "bg-primary/10 text-primary"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}

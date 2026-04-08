@@ -39,7 +39,7 @@ export default function InterviewPage() {
   async function startInterview() {
     setIsStreaming(true);
     try {
-      const res = await fetch("/api/interview/stream", {
+      const res = await fetch("/api/prep/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });

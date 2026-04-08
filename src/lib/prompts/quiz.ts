@@ -1,3 +1,48 @@
+export function getMCBulkGeneratePrompt(topicName: string, concepts: string[], strategic?: boolean, weaknesses?: string[], learnedConcepts?: string[]): string {
+  const conceptList = concepts.length > 0 ? concepts.join(', ') : topicName;
+
+  const strategicSection = strategic ? `
+## 출제 우선순위 (실전 테스트)
+1. 면접 빈출 개념 우선
+2. 약점 영역: ${weaknesses?.join(', ') || '없음'}
+3. 학습 완료 영역: ${learnedConcepts?.join(', ') || '없음'}
+4. 미학습 중요 개념
+` : '';
+
+  return `당신은 "${topicName}" 분야의 객관식 퀴즈 출제 전문가입니다.
+
+## 퀴즈 대상 개념
+${conceptList}
+${strategicSection}
+## 요구사항
+- 4지선다 객관식 문제 10개를 한번에 JSON으로 생성하세요.
+- 난이도를 점진적으로 올려주세요.
+- 모든 텍스트는 한국어로 작성하세요.
+- 각 문제의 선택지는 그럴듯하게 만들어 변별력을 확보하세요.
+- 정답은 골고루 분포시키세요 (1~4번이 편중되지 않게).
+
+## 출력 형식
+반드시 아래 JSON만 출력하세요. 다른 텍스트 없이 JSON만 반환하세요.
+
+\`\`\`json
+{
+  "questions": [
+    {
+      "index": 1,
+      "question": "문제 텍스트",
+      "choices": ["선택지1", "선택지2", "선택지3", "선택지4"],
+      "correctIndex": 0,
+      "feedback": "정답 해설"
+    }
+  ]
+}
+\`\`\`
+
+- correctIndex는 0부터 시작하는 정답 인덱스입니다.
+- feedback은 왜 해당 선택지가 정답인지 설명합니다.
+- 반드시 10문제를 생성하세요.`;
+}
+
 export function getMultipleChoicePrompt(topicName: string, concepts: string[]): string {
   const conceptList = concepts.length > 0 ? concepts.join(', ') : topicName;
 

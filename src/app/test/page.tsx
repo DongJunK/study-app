@@ -7,6 +7,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Button } from "@/components/ui/button";
 import { TestSetup } from "@/components/custom/TestSetup";
 import { TestSession } from "@/components/custom/TestSession";
+import { MCQuizSession } from "@/components/custom/MCQuizSession";
 import { AnswerComparison } from "@/components/custom/AnswerComparison";
 import { FollowUpChat } from "@/components/custom/FollowUpChat";
 import { ScoreIndicator } from "@/components/custom/ScoreIndicator";
@@ -222,8 +223,18 @@ function TestPageContent() {
         />
       )}
 
-      {/* Phase: Testing */}
-      {phase === "testing" && currentTest && (
+      {/* Phase: Testing — Multiple Choice */}
+      {phase === "testing" && currentTest && currentTest.type === "multiple-choice" && (
+        <MCQuizSession
+          topicId={topic.id}
+          topicName={topic.name}
+          strategic={isStrategic}
+          onComplete={handleTestComplete}
+        />
+      )}
+
+      {/* Phase: Testing — Other types */}
+      {phase === "testing" && currentTest && currentTest.type !== "multiple-choice" && (
         <div className="flex flex-1 min-h-0 overflow-hidden">
           <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
             <TestSession

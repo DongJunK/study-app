@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, BookOpen, ClipboardCheck, Target, MessageCircle, Settings } from "lucide-react";
+import { LayoutDashboard, BookOpen, ClipboardCheck, Target, MessageCircle, Settings, Briefcase } from "lucide-react";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { cn } from "@/lib/utils";
 
@@ -28,8 +28,20 @@ export function Sidebar() {
   const pathname = usePathname();
   const { sidebarCollapsed } = useSettingsStore();
   const [mounted, setMounted] = React.useState(false);
+  const [interviewAvailable, setInterviewAvailable] = React.useState(false);
 
   React.useEffect(() => { setMounted(true); }, []);
+
+  React.useEffect(() => {
+    fetch("/api/interview/check")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.data.available) {
+          setInterviewAvailable(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const collapsed = mounted ? sidebarCollapsed : false;
 
@@ -83,6 +95,23 @@ export function Sidebar() {
             </Link>
           );
         })}
+        {interviewAvailable && (
+          <Link
+            href="/interview"
+            className={cn(
+              "group flex items-center rounded-lg py-2.5 text-sm font-medium transition-colors relative whitespace-nowrap mx-2",
+              pathname.startsWith("/interview")
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            <div className="flex w-12 shrink-0 items-center justify-center">
+              <Briefcase className="size-[18px]" />
+            </div>
+            {!collapsed && <span>기술 면접</span>}
+            <NavTooltip label="기술 면접" collapsed={collapsed} />
+          </Link>
+        )}
       </nav>
 
       {/* Bottom: Settings */}

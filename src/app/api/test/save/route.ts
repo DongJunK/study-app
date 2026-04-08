@@ -1,5 +1,6 @@
 import { saveTestResult } from '@/lib/data/testManager';
 import { recordTestScore } from '@/lib/data/growthManager';
+import { updateLevelFromTestResults } from '@/lib/data/roadmapManager';
 import type { TestResult } from '@/types/test';
 
 export async function POST(request: Request) {
@@ -26,7 +27,15 @@ export async function POST(request: Request) {
       // Growth recording failure should not block test save
     }
 
-    return Response.json({ success: true, data: { id: result.id } });
+    // Update level based on test results
+    let levelChange: { changed: boolean; oldLevel?: string; newLevel?: string } = { changed: false };
+    try {
+      levelChange = await updateLevelFromTestResults(topicId, result.totalScore, result.maxTotalScore);
+    } catch {
+      // Level update failure should not block test save
+    }
+
+    return Response.json({ success: true, data: { id: result.id, levelChange } });
   } catch {
     return Response.json(
       {

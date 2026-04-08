@@ -36,6 +36,7 @@ export async function createTopic(name: string): Promise<Topic> {
     createdAt: now,
     weaknessCount: 0,
     status: 'new',
+    level: null,
   };
 
   const roadmap: Roadmap = {
@@ -68,6 +69,12 @@ export async function getTopic(topicId: string): Promise<Topic | null> {
     if (roadmap && roadmap.items.length > 0) {
       const completed = roadmap.items.filter(i => i.status === 'completed').length;
       topic.progress = Math.round((completed / roadmap.items.length) * 100);
+    }
+
+    // Diagnosis level
+    const diagnosis = await readJSON<{ level: string }>(path.join(dir, 'diagnosis.json'));
+    if (diagnosis && diagnosis.level) {
+      topic.level = diagnosis.level as Topic['level'];
     }
 
     // Weakness count

@@ -6,6 +6,7 @@ export interface Topic {
   createdAt: string; // ISO 8601
   weaknessCount: number;
   status: 'new' | 'in-progress' | 'completed';
+  level: 'beginner' | 'intermediate' | 'advanced' | null;
 }
 
 export interface RoadmapItem {

@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ApiResult } from "@/types/api";
+import { toast } from "sonner";
 
 function TestPageContent() {
   const searchParams = useSearchParams();
@@ -67,6 +68,7 @@ function TestPageContent() {
               createdAt: new Date().toISOString(),
               weaknessCount: 0,
               status: "in-progress",
+              level: null,
             });
           }
         })
@@ -134,11 +136,28 @@ function TestPageContent() {
     };
 
     try {
-      await fetch("/api/test/save", {
+      const res = await fetch("/api/test/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topicId: topic!.id, result }),
       });
+      const json = await res.json();
+      if (json.success && json.data?.levelChange?.changed) {
+        const levelLabel: Record<string, string> = {
+          beginner: "초급",
+          intermediate: "중급",
+          advanced: "고급",
+        };
+        const { oldLevel, newLevel } = json.data.levelChange;
+        const isPromotion = (oldLevel === "beginner" && newLevel !== "beginner") ||
+          (oldLevel === "intermediate" && newLevel === "advanced");
+        toast(
+          isPromotion
+            ? `축하합니다! 수준이 ${levelLabel[oldLevel]} → ${levelLabel[newLevel]}로 승급했습니다!`
+            : `수준이 ${levelLabel[oldLevel]} → ${levelLabel[newLevel]}로 변경되었습니다.`,
+          { duration: 5000 }
+        );
+      }
     } catch {
       // silent fail for save
     }

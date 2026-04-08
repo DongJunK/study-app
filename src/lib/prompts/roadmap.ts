@@ -29,7 +29,11 @@ Rules:
   2. Core practical concepts NEXT: Fundamental concepts needed for real-world usage
   3. Advanced/niche topics LAST: Deep internals, edge cases, and specialized topics at the end
 - Order from prerequisite to advanced within each priority group
-- 8-15 items total
+- Item count by diagnosed level (DO NOT pad with unnecessary items):
+  - beginner: 8-15 items (broad coverage needed)
+  - intermediate: 5-12 items (skip known basics)
+  - advanced: 3-8 items (only genuine gaps and deep topics)
+  - If the user has very few weak areas, generate fewer items. Quality over quantity.
 - All text in Korean
 - Include a mix of concept learning and practical application
 - If additional topics were requested, integrate them naturally into the learning sequence

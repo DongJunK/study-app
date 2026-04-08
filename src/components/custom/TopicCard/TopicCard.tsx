@@ -12,6 +12,7 @@ interface TopicCardProps {
   lastStudyDate: string | null;
   weaknessCount: number;
   status: "new" | "in-progress" | "completed";
+  level: "beginner" | "intermediate" | "advanced" | null;
   onLearn: (id: string) => void;
   onTest: (id: string) => void;
   onDelete: (id: string) => void;
@@ -20,6 +21,12 @@ interface TopicCardProps {
   lastSessionContext?: string;
   onResume?: (id: string) => void;
 }
+
+const levelConfig = {
+  beginner: { label: "초급", className: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-0" },
+  intermediate: { label: "중급", className: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-0" },
+  advanced: { label: "고급", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-0" },
+};
 
 const statusConfig = {
   new: { label: "신규", className: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-0" },
@@ -34,6 +41,7 @@ export function TopicCard({
   lastStudyDate,
   weaknessCount,
   status,
+  level,
   onLearn,
   onTest,
   onDelete,
@@ -64,9 +72,16 @@ export function TopicCard({
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col gap-1.5">
           <h3 className="text-base font-semibold leading-tight">{name}</h3>
-          <Badge variant="secondary" className={`w-fit rounded-full px-2.5 py-0.5 text-xs font-medium ${statusInfo.className}`}>
-            {statusInfo.label}
-          </Badge>
+          <div className="flex items-center gap-1.5">
+            <Badge variant="secondary" className={`w-fit rounded-full px-2.5 py-0.5 text-xs font-medium ${statusInfo.className}`}>
+              {statusInfo.label}
+            </Badge>
+            {level && (
+              <Badge variant="secondary" className={`w-fit rounded-full px-2.5 py-0.5 text-xs font-medium ${levelConfig[level].className}`}>
+                {levelConfig[level].label}
+              </Badge>
+            )}
+          </div>
         </div>
         <Button
           variant="ghost"

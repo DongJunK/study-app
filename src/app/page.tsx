@@ -203,6 +203,7 @@ export default function DashboardPage() {
                 lastStudyDate={topic.lastStudyDate}
                 weaknessCount={topic.weaknessCount}
                 status={topic.status}
+                level={topic.level}
                 onLearn={handleLearn}
                 onTest={handleTest}
                 onDelete={(id) => setDeleteTarget(id)}

@@ -14,12 +14,13 @@ import { ScoreIndicator } from "@/components/custom/ScoreIndicator";
 import { useTestStore } from "@/stores/testStore";
 import type { Topic } from "@/types/topic";
 import type { TestType, TestAnswer, TestResult } from "@/types/test";
-import { ArrowLeft, CheckCircle2, XCircle, FileCheck, ClipboardCheck, Play, Shuffle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle, FileCheck, ClipboardCheck, Play, Shuffle, Clock, ChevronRight, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ApiResult } from "@/types/api";
 import { toast } from "sonner";
+import { Progress } from "@/components/ui/progress";
 
 function TestPageContent() {
   const searchParams = useSearchParams();
@@ -489,8 +490,9 @@ export default function TestPage() {
 function TestTopicSelector() {
   const router = useRouter();
   const [topics, setTopics] = React.useState<Topic[]>([]);
-  const [diagnosisMap, setDiagnosisMap] = React.useState<Record<string, { level: string; hasTests: boolean }>>({});
+  const [topicDetails, setTopicDetails] = React.useState<Record<string, { level: string; hasTests: boolean; testResults: TestResult[] }>>({});
   const [loading, setLoading] = React.useState(true);
+  const [selectedResult, setSelectedResult] = React.useState<TestResult | null>(null);
 
   React.useEffect(() => {
     async function fetchData() {
@@ -499,27 +501,24 @@ function TestTopicSelector() {
         const json: ApiResult<Topic[]> = await res.json();
         if (json.success) {
           setTopics(json.data);
-          // Fetch diagnosis info for each topic
-          const diagMap: Record<string, { level: string; hasTests: boolean }> = {};
+          const details: Record<string, { level: string; hasTests: boolean; testResults: TestResult[] }> = {};
           await Promise.all(json.data.map(async (t: Topic) => {
             try {
               const detailRes = await fetch(`/api/topics/${t.id}/detail`);
               const detailJson = await detailRes.json();
               if (detailJson.success) {
-                diagMap[t.id] = {
+                details[t.id] = {
                   level: detailJson.data.diagnosis?.level || "",
                   hasTests: (detailJson.data.testResults?.length || 0) > 0,
+                  testResults: detailJson.data.testResults || [],
                 };
               }
             } catch { /* ignore */ }
           }));
-          setDiagnosisMap(diagMap);
+          setTopicDetails(details);
         }
-      } catch {
-        // ignore
-      } finally {
-        setLoading(false);
-      }
+      } catch { /* ignore */ }
+      finally { setLoading(false); }
     }
     fetchData();
   }, []);
@@ -527,10 +526,10 @@ function TestTopicSelector() {
   if (loading) {
     return (
       <main className="flex-1">
-        <div className="mx-auto max-w-3xl px-6 py-8">
+        <div className="mx-auto max-w-5xl px-6 py-8">
           <Skeleton className="h-8 w-48 mb-6" />
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-44 rounded-xl" />)}
           </div>
         </div>
       </main>
@@ -556,96 +555,269 @@ function TestTopicSelector() {
     );
   }
 
-  const statusConfig: Record<string, { label: string; className: string }> = {
-    "in-progress": { label: "진행중", className: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-0" },
-    new: { label: "신규", className: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-0" },
-    completed: { label: "완료", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-0" },
+  const levelConfig: Record<string, { label: string; className: string }> = {
+    beginner: { label: "초급", className: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 border-0" },
+    intermediate: { label: "중급", className: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-0" },
+    advanced: { label: "고급", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-0" },
   };
 
-  const levelLabel: Record<string, string> = { beginner: "초급", intermediate: "중급", advanced: "고급" };
-  const levelColor: Record<string, string> = {
-    beginner: "text-blue-600 dark:text-blue-400",
-    intermediate: "text-amber-600 dark:text-amber-400",
-    advanced: "text-emerald-600 dark:text-emerald-400",
+  const typeLabel: Record<string, string> = {
+    "deep-learning": "깊은 학습",
+    "multiple-choice": "객관식",
+    "short-answer": "주관식",
   };
 
   // Sort: tested > in-progress > new
   const sorted = [...topics].sort((a, b) => {
-    const aHasTests = diagnosisMap[a.id]?.hasTests ? 0 : 1;
-    const bHasTests = diagnosisMap[b.id]?.hasTests ? 0 : 1;
+    const aHasTests = topicDetails[a.id]?.hasTests ? 0 : 1;
+    const bHasTests = topicDetails[b.id]?.hasTests ? 0 : 1;
     if (aHasTests !== bHasTests) return aHasTests - bHasTests;
     const statusOrder = (s: string) => s === "in-progress" ? 0 : s === "new" ? 1 : 2;
-    const so = statusOrder(a.status) - statusOrder(b.status);
-    if (so !== 0) return so;
-    return a.name.localeCompare(b.name);
+    return statusOrder(a.status) - statusOrder(b.status) || a.name.localeCompare(b.name);
   });
 
+  // All test results across topics, sorted newest first
+  const allTestResults: (TestResult & { topicName: string })[] = [];
+  for (const t of topics) {
+    const detail = topicDetails[t.id];
+    if (detail?.testResults) {
+      for (const r of detail.testResults) {
+        allTestResults.push({ ...r, topicName: t.name });
+      }
+    }
+  }
+  allTestResults.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
   return (
-    <main className="flex-1">
-      <div className="mx-auto max-w-3xl px-6 py-8">
-        <h1 className="text-2xl font-semibold mb-2">테스트</h1>
-        <p className="text-sm text-muted-foreground mb-6">테스트할 주제를 선택하세요</p>
-        <div className="space-y-3">
-          {/* All topics mixed test */}
-          {topics.length >= 2 && (
-            <div
-              className="flex items-center justify-between rounded-xl border-2 border-primary/30 bg-primary/5 p-4 cursor-pointer transition-colors hover:border-primary/50"
-              onClick={() => router.push("/test?topic=all")}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.key === "Enter") router.push("/test?topic=all"); }}
-            >
-              <div className="flex items-center gap-4">
-                <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Shuffle className="size-5 text-primary" />
-                </div>
-                <div>
-                  <p className="font-medium">전체 주제 테스트</p>
-                  <p className="text-xs text-muted-foreground">{topics.length}개 주제에서 랜덤 출제</p>
-                </div>
+    <main className="flex-1 overflow-y-auto">
+      <div className="mx-auto max-w-5xl px-6 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold">테스트</h1>
+          <p className="mt-1 text-sm text-muted-foreground">테스트할 주제를 선택하세요</p>
+        </div>
+
+        {/* All topics mixed test */}
+        {topics.length >= 2 && (
+          <div
+            className="flex items-center justify-between rounded-xl border-2 border-primary/30 bg-primary/5 p-5 cursor-pointer transition-colors hover:border-primary/50 mb-6"
+            onClick={() => router.push("/test?topic=all")}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === "Enter") router.push("/test?topic=all"); }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Shuffle className="size-5 text-primary" />
               </div>
-              <Button size="sm" variant="ghost" className="gap-1.5">
-                <Play className="size-3.5" />
-                시작하기
-              </Button>
+              <div>
+                <p className="font-medium">전체 주제 테스트</p>
+                <p className="text-xs text-muted-foreground">{topics.length}개 주제에서 랜덤 출제</p>
+              </div>
             </div>
-          )}
+            <Button size="sm" variant="ghost" className="gap-1.5">
+              <Play className="size-3.5" />
+              시작하기
+            </Button>
+          </div>
+        )}
+
+        {/* Topic cards grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {sorted.map((t) => {
-            const diag = diagnosisMap[t.id];
-            const sc = statusConfig[t.status] || statusConfig["new"];
+            const detail = topicDetails[t.id];
+            const level = detail?.level;
+            const testCount = detail?.testResults?.length || 0;
+            const latestTest = detail?.testResults?.[0];
+            const latestScore = latestTest ? Math.round((latestTest.totalScore / latestTest.maxTotalScore) * 100) : null;
+
             return (
               <div
                 key={t.id}
-                className="flex items-center justify-between rounded-xl border border-border bg-card p-4 cursor-pointer transition-colors hover:border-primary/50"
+                className="rounded-xl border border-border bg-card p-5 flex flex-col gap-3 transition-colors hover:border-primary/50 cursor-pointer"
                 onClick={() => router.push(`/test?topic=${t.id}`)}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => { if (e.key === "Enter") router.push(`/test?topic=${t.id}`); }}
               >
-                <div className="flex items-center gap-4">
-                  <div className="size-10 rounded-lg bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center">
-                    <ClipboardCheck className="size-5 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <div>
-                    <p className="font-medium">{t.name}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <Badge variant="secondary" className={`text-xs ${sc.className}`}>{sc.label}</Badge>
-                      {diag?.level && (
-                        <span className={`text-xs font-medium ${levelColor[diag.level] || ""}`}>{levelLabel[diag.level] || diag.level}</span>
+                {/* Name + badges */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-col gap-1.5">
+                    <h3 className="text-base font-semibold leading-tight">{t.name}</h3>
+                    <div className="flex items-center gap-1.5">
+                      {level && levelConfig[level] && (
+                        <Badge variant="secondary" className={`w-fit rounded-full px-2.5 py-0.5 text-xs font-medium ${levelConfig[level].className}`}>
+                          {levelConfig[level].label}
+                        </Badge>
                       )}
-                      <span className="text-xs text-muted-foreground">{t.progress}% 완료</span>
                     </div>
                   </div>
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-purple-50 dark:bg-purple-500/10">
+                    <ClipboardCheck className="size-4.5 text-purple-600 dark:text-purple-400" />
+                  </div>
                 </div>
-                <Button size="sm" variant="ghost" className="gap-1.5">
-                  <Play className="size-3.5" />
-                  테스트하기
-                </Button>
+
+                {/* Progress */}
+                <div className="flex items-center gap-3">
+                  <Progress value={t.progress} className="h-1.5 flex-1" />
+                  <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{t.progress}%</span>
+                </div>
+
+                {/* Meta */}
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <FileCheck className="size-3" />
+                    <span>테스트 {testCount}회</span>
+                  </div>
+                  {latestScore !== null && (
+                    <div className={`flex items-center gap-1.5 text-xs font-medium ${latestScore >= 70 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                      <Clock className="size-3" />
+                      <span>최근 점수 {latestScore}%</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action */}
+                <div className="mt-auto pt-1">
+                  <Button size="sm" className="w-full gap-1.5" onClick={(e) => { e.stopPropagation(); router.push(`/test?topic=${t.id}`); }}>
+                    <Play className="size-3.5" />
+                    테스트하기
+                  </Button>
+                </div>
               </div>
             );
           })}
         </div>
+
+        {/* Test history section */}
+        <div className="mt-10">
+          <div className="flex items-center justify-between border-b border-border pb-3 mb-5">
+            <h2 className="text-lg font-semibold">테스트 이력</h2>
+          </div>
+
+          {allTestResults.length === 0 ? (
+            <div className="rounded-xl border border-border bg-card p-6 text-center">
+              <p className="text-sm text-muted-foreground">아직 테스트 이력이 없습니다</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {allTestResults.map((r) => {
+                const pct = r.maxTotalScore > 0 ? Math.round((r.totalScore / r.maxTotalScore) * 100) : 0;
+                return (
+                  <div
+                    key={r.id}
+                    className="flex items-center justify-between rounded-xl border border-border bg-card p-4 cursor-pointer transition-colors hover:border-primary/50"
+                    onClick={() => setSelectedResult(r)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === "Enter") setSelectedResult(r); }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`flex size-8 items-center justify-center rounded-lg ${r.passed ? "bg-emerald-50 dark:bg-emerald-500/10" : "bg-red-50 dark:bg-red-500/10"}`}>
+                        {r.passed
+                          ? <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
+                          : <XCircle className="size-4 text-red-600 dark:text-red-400" />
+                        }
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{r.topicName}</span>
+                          <span className="text-xs text-muted-foreground rounded-full bg-muted px-2 py-0.5">{typeLabel[r.type] || r.type}</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(r.createdAt).toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-sm font-semibold ${r.passed ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                        {pct}%
+                      </span>
+                      <ChevronRight className="size-4 text-muted-foreground" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Test detail modal */}
+      {selectedResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setSelectedResult(null)}>
+          <div
+            className="w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border border-border bg-card shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal header */}
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-6 py-4 rounded-t-2xl">
+              <div>
+                <h3 className="text-base font-semibold">테스트 상세</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {(allTestResults.find(r => r.id === selectedResult.id) as (TestResult & { topicName: string }) | undefined)?.topicName || ""} &middot; {typeLabel[selectedResult.type] || selectedResult.type} &middot; {new Date(selectedResult.createdAt).toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                </p>
+              </div>
+              <Button variant="ghost" size="icon-xs" onClick={() => setSelectedResult(null)}>
+                <X className="size-4" />
+              </Button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Score summary */}
+              {(() => {
+                const pct = selectedResult.maxTotalScore > 0 ? Math.round((selectedResult.totalScore / selectedResult.maxTotalScore) * 100) : 0;
+                return (
+                  <div className={`flex items-center justify-center gap-4 rounded-xl border p-5 ${selectedResult.passed ? "border-emerald-500/30 bg-emerald-500/5" : "border-red-500/30 bg-red-500/5"}`}>
+                    {selectedResult.passed ? <CheckCircle2 className="size-8 text-emerald-500" /> : <XCircle className="size-8 text-red-500" />}
+                    <div className="text-center">
+                      <p className={`text-2xl font-bold ${selectedResult.passed ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                        {selectedResult.totalScore} / {selectedResult.maxTotalScore} ({pct}%)
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{selectedResult.passed ? "합격" : "불합격"} (합격선: 70%)</p>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Per-question detail */}
+              <div className="space-y-3">
+                {selectedResult.answers.map((a, idx) => (
+                  <div key={idx} className="rounded-xl border border-border bg-background p-4 space-y-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="text-sm font-semibold">문제 {idx + 1}</h4>
+                      <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${a.passed ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-red-500/10 text-red-600 dark:text-red-400"}`}>
+                        {a.score}/{a.maxScore}
+                      </span>
+                    </div>
+
+                    {a.question && (
+                      <p className="text-sm text-foreground leading-relaxed">{a.question}</p>
+                    )}
+
+                    <div className="flex flex-col gap-1.5 text-sm">
+                      <div className="flex gap-2">
+                        <span className="shrink-0 text-muted-foreground min-w-[3rem]">내 답:</span>
+                        <span className={a.passed ? "text-foreground" : "text-red-600 dark:text-red-400"}>{a.userAnswer || "-"}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <span className="shrink-0 text-muted-foreground min-w-[3rem]">정답:</span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">{a.modelAnswer || "-"}</span>
+                      </div>
+                    </div>
+
+                    {a.feedback && (
+                      <div className="rounded-lg bg-muted/50 px-3 py-2.5">
+                        <p className="text-xs text-muted-foreground leading-relaxed">{a.feedback}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

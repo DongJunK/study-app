@@ -216,12 +216,14 @@ function TestPageContent() {
 
       {/* Phase: Setup */}
       {phase === "setup" && (
-        <TestSetup
-          topicId={topic.id}
-          topicName={topic.name}
-          onStart={(type, strategic) => handleStartTest(type, strategic)}
-          topicNames={allTopicNames}
-        />
+        <div className="flex-1 overflow-y-auto">
+          <TestSetup
+            topicId={topic.id}
+            topicName={topic.name}
+            onStart={(type, strategic) => handleStartTest(type, strategic)}
+            topicNames={allTopicNames}
+          />
+        </div>
       )}
 
       {/* Phase: Testing — Multiple Choice */}

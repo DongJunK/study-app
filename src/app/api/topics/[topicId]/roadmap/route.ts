@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getTopic } from '@/lib/data/topicManager';
 import { getRoadmap, saveRoadmap } from '@/lib/data/roadmapManager';
+import { recordProgressChange } from '@/lib/data/growthManager';
 import { askClaude } from '@/lib/claude/client';
 import { getRoadmapPrompt } from '@/lib/prompts/roadmap';
 import type { RoadmapItem } from '@/types/topic';
@@ -230,6 +231,16 @@ export async function PATCH(
     }
 
     await saveRoadmap(topicId, existingRoadmap);
+
+    // Record progress after roadmap save so the calculation reflects the latest status
+    try {
+      const completed = existingRoadmap.items.filter(i => i.status === 'completed').length;
+      const total = existingRoadmap.items.length;
+      const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+      await recordProgressChange(topicId, progress);
+    } catch {
+      // Growth recording failure should not block roadmap update
+    }
 
     return NextResponse.json({ success: true, data: existingRoadmap });
   } catch {

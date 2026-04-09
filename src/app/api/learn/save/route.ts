@@ -7,7 +7,7 @@ import type { LearningSession } from '@/types/session';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { session } = body as { session: LearningSession };
+    const { session, isFinalSave } = body as { session: LearningSession; isFinalSave?: boolean };
 
     if (!session || !session.id || !session.topicId) {
       return NextResponse.json(
@@ -24,19 +24,16 @@ export async function POST(request: Request) {
 
     await saveLearningSession(session);
 
-    // Record growth data
-    try {
-      const minutes = session.elapsedSeconds
-        ? Math.max(1, Math.round(session.elapsedSeconds / 60))
-        : Math.max(1, Math.round((session.messages?.length ?? 0) * 2));
-      await recordSessionMinutes(session.topicId, minutes);
-
-      const topic = await getTopic(session.topicId);
-      if (topic) {
-        await recordProgressChange(session.topicId, topic.progress);
+    // Record growth data only on final save (not auto-save)
+    if (isFinalSave) {
+      try {
+        const minutes = session.elapsedSeconds
+          ? Math.max(1, Math.round(session.elapsedSeconds / 60))
+          : Math.max(1, Math.round((session.messages?.length ?? 0) * 2));
+        await recordSessionMinutes(session.topicId, minutes);
+      } catch {
+        // Growth recording failure should not block session save
       }
-    } catch {
-      // Growth recording failure should not block session save
     }
 
     return NextResponse.json({ success: true, data: { id: session.id } });

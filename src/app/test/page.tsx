@@ -14,13 +14,115 @@ import { ScoreIndicator } from "@/components/custom/ScoreIndicator";
 import { useTestStore } from "@/stores/testStore";
 import type { Topic } from "@/types/topic";
 import type { TestType, TestAnswer, TestResult } from "@/types/test";
-import { ArrowLeft, CheckCircle2, XCircle, FileCheck, ClipboardCheck, Play, Shuffle, Clock, ChevronRight, X } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle, FileCheck, ClipboardCheck, Play, Shuffle, Clock, ChevronRight, X, ChevronDown } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ApiResult } from "@/types/api";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
+
+const mdComponents = {
+  p: ({ children, ...props }: React.ComponentProps<"p">) => <p className="text-sm leading-relaxed mb-2 last:mb-0" {...props}>{children}</p>,
+  ul: ({ children, ...props }: React.ComponentProps<"ul">) => <ul className="text-sm list-disc pl-4 mb-2 space-y-1" {...props}>{children}</ul>,
+  ol: ({ children, ...props }: React.ComponentProps<"ol">) => <ol className="text-sm list-decimal pl-4 mb-2 space-y-1" {...props}>{children}</ol>,
+  li: ({ children, ...props }: React.ComponentProps<"li">) => <li className="text-sm" {...props}>{children}</li>,
+  strong: ({ children, ...props }: React.ComponentProps<"strong">) => <strong className="font-semibold" {...props}>{children}</strong>,
+  code: ({ children, ...props }: React.ComponentProps<"code">) => <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono" {...props}>{children}</code>,
+  pre: ({ children, ...props }: React.ComponentProps<"pre">) => <pre className="rounded-lg bg-muted p-3 text-xs font-mono overflow-x-auto mb-2" {...props}>{children}</pre>,
+  h3: ({ children, ...props }: React.ComponentProps<"h3">) => <h3 className="text-sm font-semibold mt-3 mb-1" {...props}>{children}</h3>,
+  h4: ({ children, ...props }: React.ComponentProps<"h4">) => <h4 className="text-sm font-medium mt-2 mb-1" {...props}>{children}</h4>,
+  blockquote: ({ children, ...props }: React.ComponentProps<"blockquote">) => <blockquote className="border-l-2 border-primary/30 pl-3 text-sm text-muted-foreground italic mb-2" {...props}>{children}</blockquote>,
+};
+
+function AnswerDetailCard({ answer, index, isMC }: { answer: TestAnswer; index: number; isMC?: boolean }) {
+  const [expanded, setExpanded] = React.useState(false);
+
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      {/* Header — always visible, clickable */}
+      <button
+        className="flex w-full items-center justify-between px-5 py-4 text-left hover:bg-muted/30 transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-center gap-3">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold">
+            {index + 1}
+          </span>
+          <span className="text-sm font-medium line-clamp-1">
+            {answer.question || `질문 ${index + 1}`}
+          </span>
+        </div>
+        <div className="flex items-center gap-2.5 shrink-0">
+          <span className="text-sm font-semibold">{answer.score}/{answer.maxScore}</span>
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+              answer.passed
+                ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                : "bg-red-500/10 text-red-600 dark:text-red-400"
+            }`}
+          >
+            {isMC ? (answer.passed ? "정답" : "오답") : (answer.passed ? "통과" : "미달")}
+          </span>
+          <ChevronDown className={`size-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
+        </div>
+      </button>
+
+      {/* Expanded content */}
+      {expanded && (
+        <div className="border-t border-border px-5 py-4 space-y-4">
+          {/* Question */}
+          {answer.question && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1.5">질문</p>
+              <div className="text-sm text-foreground">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{answer.question}</ReactMarkdown>
+              </div>
+            </div>
+          )}
+
+          {/* User answer */}
+          {answer.userAnswer && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1.5">내 답변</p>
+              <div className={`rounded-lg border px-4 py-3 ${answer.passed ? "border-green-500/20 bg-green-500/5" : "border-red-500/20 bg-red-500/5"}`}>
+                <div className="text-sm">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{answer.userAnswer}</ReactMarkdown>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Model answer */}
+          {answer.modelAnswer && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1.5">모범 답변</p>
+              <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+                <div className="text-sm">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{answer.modelAnswer}</ReactMarkdown>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Feedback */}
+          {answer.feedback && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1.5">피드백</p>
+              <div className="rounded-lg bg-muted/50 px-4 py-3">
+                <div className="text-sm text-muted-foreground">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{answer.feedback}</ReactMarkdown>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function TestPageContent() {
   const searchParams = useSearchParams();
@@ -266,7 +368,8 @@ function TestPageContent() {
 
       {/* Phase: Results */}
       {phase === "results" && (
-        <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold">테스트 결과</h1>
             <div className="mt-2"><p className="text-muted-foreground">{topic.name}</p>{allTopicNames.length > 0 && (<div className="flex flex-wrap justify-center gap-1.5 mt-2">{allTopicNames.map((n) => (<span key={n} className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">{n}</span>))}</div>)}</div>
@@ -317,76 +420,12 @@ function TestPageContent() {
                 );
               })()}
 
-              {/* Multiple-choice: question/answer/feedback list */}
-              {currentTest?.type === "multiple-choice" ? (
-                <div className="space-y-4">
-                  {completedAnswers.map((answer, idx) => (
-                    <div
-                      key={idx}
-                      className="rounded-xl border border-border bg-card p-5 space-y-3"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <h3 className="text-sm font-semibold">
-                          문제 {idx + 1}
-                        </h3>
-                        <span
-                          className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            answer.passed
-                              ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                              : "bg-red-500/10 text-red-600 dark:text-red-400"
-                          }`}
-                        >
-                          {answer.passed ? "정답" : "오답"}
-                        </span>
-                      </div>
-                      {answer.question && (
-                        <p className="text-sm text-foreground leading-relaxed">{answer.question}</p>
-                      )}
-                      <div className="flex flex-col gap-1.5 text-sm">
-                        <div className="flex gap-2">
-                          <span className="shrink-0 text-muted-foreground">내 답:</span>
-                          <span className={answer.passed ? "text-foreground" : "text-red-600 dark:text-red-400"}>{answer.userAnswer || "-"}</span>
-                        </div>
-                        <div className="flex gap-2">
-                          <span className="shrink-0 text-muted-foreground">정답:</span>
-                          <span className="text-green-600 dark:text-green-400 font-medium">{answer.modelAnswer || "-"}</span>
-                        </div>
-                      </div>
-                      {answer.feedback && (
-                        <div className="rounded-lg bg-muted/50 px-3 py-2.5">
-                          <p className="text-sm text-muted-foreground leading-relaxed">{answer.feedback}</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                /* Non-multiple-choice: existing per-answer breakdown */
-                <div className="space-y-2">
-                  {completedAnswers.map((answer, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3"
-                    >
-                      <span className="text-sm">질문 {idx + 1}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">
-                          {answer.score}/{answer.maxScore}
-                        </span>
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                            answer.passed
-                              ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                              : "bg-red-500/10 text-red-600 dark:text-red-400"
-                          }`}
-                        >
-                          {answer.passed ? "통과" : "미달"}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {/* Answer details */}
+              <div className="space-y-4">
+                {completedAnswers.map((answer, idx) => (
+                  <AnswerDetailCard key={idx} answer={answer} index={idx} isMC={currentTest?.type === "multiple-choice"} />
+                ))}
+              </div>
             </div>
           )}
 
@@ -410,10 +449,12 @@ function TestPageContent() {
             )}
           </div>
         </div>
+        </div>
       )}
 
       {/* Phase: Comparison */}
       {phase === "comparison" && comparison && (
+        <div className="flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold">모범답안 비교</h1>
@@ -438,10 +479,12 @@ function TestPageContent() {
             </Button>
           </div>
         </div>
+        </div>
       )}
 
       {/* Phase: Follow-up */}
       {phase === "followup" && comparison && (
+        <div className="flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold">후속 Q&A</h1>
@@ -466,6 +509,7 @@ function TestPageContent() {
             modelAnswer={comparison.modelAnswer}
             onComplete={handleFollowUpComplete}
           />
+        </div>
         </div>
       )}
     </main>
@@ -771,35 +815,7 @@ function TestTopicSelector() {
               {/* Per-question detail */}
               <div className="space-y-3">
                 {selectedResult.answers.map((a, idx) => (
-                  <div key={idx} className="rounded-xl border border-border bg-background p-4 space-y-2.5">
-                    <div className="flex items-start justify-between gap-2">
-                      <h4 className="text-sm font-semibold">문제 {idx + 1}</h4>
-                      <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${a.passed ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-red-500/10 text-red-600 dark:text-red-400"}`}>
-                        {a.score}/{a.maxScore}
-                      </span>
-                    </div>
-
-                    {a.question && (
-                      <p className="text-sm text-foreground leading-relaxed">{a.question}</p>
-                    )}
-
-                    <div className="flex flex-col gap-1.5 text-sm">
-                      <div className="flex gap-2">
-                        <span className="shrink-0 text-muted-foreground min-w-[3rem]">내 답:</span>
-                        <span className={a.passed ? "text-foreground" : "text-red-600 dark:text-red-400"}>{a.userAnswer || "-"}</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="shrink-0 text-muted-foreground min-w-[3rem]">정답:</span>
-                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">{a.modelAnswer || "-"}</span>
-                      </div>
-                    </div>
-
-                    {a.feedback && (
-                      <div className="rounded-lg bg-muted/50 px-3 py-2.5">
-                        <p className="text-xs text-muted-foreground leading-relaxed">{a.feedback}</p>
-                      </div>
-                    )}
-                  </div>
+                  <AnswerDetailCard key={idx} answer={a} index={idx} isMC={selectedResult.type === "multiple-choice"} />
                 ))}
               </div>
             </div>

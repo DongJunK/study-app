@@ -4,7 +4,7 @@ import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft, BookOpen, TrendingUp, Target, FileCheck,
-  RotateCcw, Play, ClipboardCheck, Calendar, Award
+  RotateCcw, Play, ClipboardCheck, Calendar, Award, Clock, MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,12 +21,25 @@ import type { DiagnosisData } from "@/lib/data/roadmapManager";
 import type { GrowthData } from "@/lib/data/growthManager";
 import { useSettingsStore } from "@/stores/settingsStore";
 
+interface SessionInfo {
+  id: string;
+  filename: string;
+  date: string;
+  size: number;
+  mode?: string;
+  roadmapItemId?: string | null;
+  messageCount?: number;
+  startedAt?: string;
+  elapsedSeconds?: number;
+  conceptTitle?: string;
+}
+
 interface TopicDetailData {
   topic: Topic;
   diagnosis: DiagnosisData | null;
   roadmap: Roadmap | null;
   testResults: TestResult[];
-  recentSessions: Array<{ id: string; filename: string; date: string; size: number }>;
+  recentSessions: SessionInfo[];
   weaknesses: Weakness[];
   growth: GrowthData | null;
 }
@@ -205,27 +218,63 @@ export default function TopicDetailPage() {
                 학습 이력
               </h3>
               {(() => {
-                // Filter out 0KB sessions and group by date
-                const validSessions = recentSessions.filter(s => s.size > 0);
+                const validSessions = recentSessions.filter(s => s.size > 0 && (s.messageCount ?? 0) > 0);
                 if (validSessions.length === 0) {
                   return <p className="text-sm text-muted-foreground text-center py-4">아직 학습 기록이 없습니다</p>;
                 }
-                const grouped = validSessions.reduce<Record<string, { count: number; totalSize: number }>>((acc, s) => {
-                  const dateKey = new Date(s.date).toLocaleDateString("ko-KR");
-                  if (!acc[dateKey]) acc[dateKey] = { count: 0, totalSize: 0 };
-                  acc[dateKey].count += 1;
-                  acc[dateKey].totalSize += s.size;
-                  return acc;
-                }, {});
+
+                const modeLabel: Record<string, string> = {
+                  basic: "기본 학습",
+                  deep: "심화 학습",
+                  example: "예제 학습",
+                  quiz: "퀴즈",
+                  diagnosis: "수준 진단",
+                };
+
+                function formatElapsed(sec?: number) {
+                  if (!sec || sec <= 0) return null;
+                  const m = Math.floor(sec / 60);
+                  if (m < 1) return "1분 미만";
+                  if (m >= 60) return `${Math.floor(m / 60)}시간 ${m % 60}분`;
+                  return `${m}분`;
+                }
+
                 return (
-                  <div className="space-y-1">
-                    {Object.entries(grouped).map(([date, { count }]) => (
-                      <div key={date} className="flex items-center justify-between py-2.5 border-b border-border last:border-0">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="size-3.5 text-muted-foreground" />
-                          <span className="text-sm">{date}</span>
+                  <div className="space-y-2">
+                    {validSessions.map((s) => (
+                      <div key={s.id} className="rounded-lg border border-border bg-background px-4 py-3 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="size-3.5 text-muted-foreground" />
+                            <span className="text-sm font-medium">
+                              {new Date(s.date).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" })}
+                            </span>
+                            {s.mode && (
+                              <Badge variant="secondary" className="text-xs">
+                                {modeLabel[s.mode] ?? s.mode}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            {formatElapsed(s.elapsedSeconds) && (
+                              <span className="flex items-center gap-1">
+                                <Clock className="size-3" />
+                                {formatElapsed(s.elapsedSeconds)}
+                              </span>
+                            )}
+                            {(s.messageCount ?? 0) > 0 && (
+                              <span className="flex items-center gap-1">
+                                <MessageSquare className="size-3" />
+                                {s.messageCount}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <span className="text-xs text-muted-foreground">{count}회 학습</span>
+                        {s.conceptTitle && (
+                          <p className="text-xs text-muted-foreground pl-5.5">
+                            {s.conceptTitle}
+                          </p>
+                        )}
                       </div>
                     ))}
                   </div>

@@ -96,7 +96,7 @@ export function LearningSession({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function saveSession() {
+  async function saveSession(isFinalSave = false) {
     setSaveStatus("saving");
     try {
       const session: LearningSessionType = {
@@ -106,7 +106,7 @@ export function LearningSession({
         formats,
         messages: messagesRef.current,
         startedAt: startedAtRef.current,
-        endedAt: null,
+        endedAt: isFinalSave ? new Date().toISOString() : null,
         summary: null,
         roadmapItemId,
         elapsedSeconds: elapsed,
@@ -115,7 +115,7 @@ export function LearningSession({
       await fetch("/api/learn/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session }),
+        body: JSON.stringify({ session, isFinalSave }),
       });
 
       setSaveStatus("saved");
@@ -239,11 +239,13 @@ export function LearningSession({
     }, 50);
   }
 
-  function handleEndSession() {
+  async function handleEndSession() {
+    await saveSession(true);
     onSessionEnd(messagesRef.current, false);
   }
 
-  function handleComplete() {
+  async function handleComplete() {
+    await saveSession(true);
     onSessionEnd(messagesRef.current, true);
   }
 

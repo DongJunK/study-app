@@ -29,6 +29,12 @@ export function TestSession({
   const [isStarted, setIsStarted] = React.useState(false);
   const [testFinished, setTestFinished] = React.useState(false);
   const questionCountRef = React.useRef(0);
+  const messagesRef = React.useRef<Message[]>([]);
+
+  // Keep messagesRef in sync
+  React.useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   const { currentTest, addAnswer } = useTestStore();
 
@@ -174,11 +180,33 @@ export function TestSession({
         // Real-time scoring for deep-learning / short-answer (not multiple-choice)
         if (type !== "multiple-choice" && typeof parsed.score === "number" && typeof parsed.maxScore === "number") {
           questionCountRef.current += 1;
+
+          // Extract question and user answer from recent chat messages
+          const msgs = messagesRef.current;
+          let lastQuestion = parsed.question || "";
+          let lastUserAnswer = parsed.userAnswer || "";
+
+          if (!lastQuestion || !lastUserAnswer) {
+            // Walk backwards: the most recent user message is the answer,
+            // the assistant message before it contains the question
+            for (let i = msgs.length - 1; i >= 0; i--) {
+              if (!lastUserAnswer && msgs[i].role === "user") {
+                lastUserAnswer = msgs[i].content;
+              } else if (lastUserAnswer && !lastQuestion && msgs[i].role === "assistant") {
+                // Strip JSON blocks from assistant message to get clean question text
+                lastQuestion = msgs[i].content
+                  .replace(/```json\s*\n?[\s\S]*?```/g, "")
+                  .trim();
+                break;
+              }
+            }
+          }
+
           const answer: TestAnswer = {
             questionIndex: questionCountRef.current,
-            question: "",
-            userAnswer: "",
-            modelAnswer: "",
+            question: lastQuestion,
+            userAnswer: lastUserAnswer,
+            modelAnswer: parsed.modelAnswer || parsed.correctAnswer || "",
             score: parsed.score,
             maxScore: parsed.maxScore,
             passed: parsed.passed ?? parsed.score >= 7,
@@ -332,10 +360,10 @@ function getTypeLabel(type: TestType): string {
 function getSystemPromptForType(type: TestType, topicName: string): string {
   switch (type) {
     case "deep-learning":
-      return `당신은 "${topicName}" 분야의 심층 학습 검증 전문가입니다. 이전 대화를 이어서 진행하세요. 학생의 답변을 평가하고 점수를 매긴 뒤, 꼬리질문을 계속하세요. 각 답변 평가 후 반드시 \`\`\`json {"score": N, "maxScore": 10, "passed": true/false, "feedback": "피드백"} \`\`\` 형식의 JSON을 포함하세요. 모든 질문이 끝나면 \`\`\`json {"type": "final", "totalQuestions": N, "summary": "종합 평가"} \`\`\` 를 포함하세요. 한국어로 진행하세요.`;
+      return `당신은 "${topicName}" 분야의 심층 학습 검증 전문가입니다. 이전 대화를 이어서 진행하세요. 학생의 답변을 평가하고 점수를 매긴 뒤, 꼬리질문을 계속하세요. 각 답변 평가 후 반드시 \`\`\`json {"score": N, "maxScore": 10, "passed": true/false, "feedback": "피드백", "modelAnswer": "이 질문에 대한 모범 답변"} \`\`\` 형식의 JSON을 포함하세요. modelAnswer는 6년차 개발자 수준의 모범 답변을 간결하게 작성하세요. 모든 질문이 끝나면 \`\`\`json {"type": "final", "totalQuestions": N, "summary": "종합 평가"} \`\`\` 를 포함하세요. 한국어로 진행하세요.`;
     case "multiple-choice":
       return `당신은 "${topicName}" 분야의 객관식 퀴즈 출제 전문가입니다. 이전 대화를 이어서 진행하세요. 학생의 답을 채점하고 다음 문제를 출제하세요. 정답: \`\`\`json {"score": 10, "maxScore": 10, "passed": true, "feedback": "해설"} \`\`\`, 오답: \`\`\`json {"score": 0, "maxScore": 10, "passed": false, "feedback": "해설"} \`\`\`. 모든 문제 후: \`\`\`json {"type": "final", "totalQuestions": 5, "summary": "종합 평가"} \`\`\`. 한국어로 진행하세요.`;
     case "short-answer":
-      return `당신은 "${topicName}" 분야의 주관식 퀴즈 출제 전문가입니다. 이전 대화를 이어서 진행하세요. 학생의 답변을 1-10점 척도로 채점하세요. \`\`\`json {"score": N, "maxScore": 10, "passed": true/false, "feedback": "피드백"} \`\`\`. 모든 문제 후: \`\`\`json {"type": "final", "totalQuestions": 5, "summary": "종합 평가"} \`\`\`. 한국어로 진행하세요.`;
+      return `당신은 "${topicName}" 분야의 주관식 퀴즈 출제 전문가입니다. 이전 대화를 이어서 진행하세요. 학생의 답변을 1-10점 척도로 채점하세요. \`\`\`json {"score": N, "maxScore": 10, "passed": true/false, "feedback": "피드백", "modelAnswer": "이 질문에 대한 모범 답변"} \`\`\`. modelAnswer는 핵심을 간결하게 작성하세요. 모든 문제 후: \`\`\`json {"type": "final", "totalQuestions": 5, "summary": "종합 평가"} \`\`\`. 한국어로 진행하세요.`;
   }
 }

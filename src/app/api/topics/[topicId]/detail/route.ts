@@ -32,20 +32,59 @@ export async function GET(
       getGrowthData(topicId).catch(() => null),
     ]);
 
-    // Read recent sessions
+    // Read recent sessions with details
     const sessionsDir = path.join(getTopicDir(topicId), 'sessions');
-    let recentSessions: Array<{ id: string; filename: string; date: string; size: number }> = [];
+    let recentSessions: Array<{
+      id: string;
+      filename: string;
+      date: string;
+      size: number;
+      mode?: string;
+      roadmapItemId?: string | null;
+      messageCount?: number;
+      startedAt?: string;
+      elapsedSeconds?: number;
+      conceptTitle?: string;
+    }> = [];
     try {
       const files = await fs.readdir(sessionsDir);
-      const sessionFiles = files.filter(f => f.endsWith('.json') || f.endsWith('.md')).sort().reverse().slice(0, 5);
+      const sessionFiles = files.filter(f => f.endsWith('.json')).sort().reverse().slice(0, 20);
       recentSessions = await Promise.all(
         sessionFiles.map(async (f) => {
           const stat = await fs.stat(path.join(sessionsDir, f));
+          let mode: string | undefined;
+          let roadmapItemId: string | null | undefined;
+          let messageCount: number | undefined;
+          let startedAt: string | undefined;
+          let elapsedSeconds: number | undefined;
+          try {
+            const content = await fs.readFile(path.join(sessionsDir, f), 'utf-8');
+            const session = JSON.parse(content);
+            mode = session.mode;
+            roadmapItemId = session.roadmapItemId;
+            messageCount = session.messages?.length ?? 0;
+            startedAt = session.startedAt;
+            elapsedSeconds = session.elapsedSeconds;
+          } catch { /* ignore parse errors */ }
+
+          // Resolve roadmap item title
+          let conceptTitle: string | undefined;
+          if (roadmapItemId && roadmap) {
+            const item = roadmap.items.find(i => i.id === roadmapItemId);
+            if (item) conceptTitle = item.title;
+          }
+
           return {
-            id: f.replace('.json', '').replace('.md', ''),
+            id: f.replace('.json', ''),
             filename: f,
-            date: stat.mtime.toISOString(),
+            date: startedAt || stat.mtime.toISOString(),
             size: stat.size,
+            mode,
+            roadmapItemId,
+            messageCount,
+            startedAt,
+            elapsedSeconds,
+            conceptTitle,
           };
         })
       );

@@ -45,10 +45,11 @@ export async function GET(
       startedAt?: string;
       elapsedSeconds?: number;
       conceptTitle?: string;
+      completed?: boolean;
     }> = [];
     try {
       const files = await fs.readdir(sessionsDir);
-      const sessionFiles = files.filter(f => f.endsWith('.json')).sort().reverse().slice(0, 20);
+      const sessionFiles = files.filter(f => f.endsWith('.json')).sort().reverse();
       recentSessions = await Promise.all(
         sessionFiles.map(async (f) => {
           const stat = await fs.stat(path.join(sessionsDir, f));
@@ -57,6 +58,7 @@ export async function GET(
           let messageCount: number | undefined;
           let startedAt: string | undefined;
           let elapsedSeconds: number | undefined;
+          let completed: boolean | undefined;
           try {
             const content = await fs.readFile(path.join(sessionsDir, f), 'utf-8');
             const session = JSON.parse(content);
@@ -65,6 +67,7 @@ export async function GET(
             messageCount = session.messages?.length ?? 0;
             startedAt = session.startedAt;
             elapsedSeconds = session.elapsedSeconds;
+            completed = session.completed;
           } catch { /* ignore parse errors */ }
 
           // Resolve roadmap item title
@@ -85,12 +88,20 @@ export async function GET(
             startedAt,
             elapsedSeconds,
             conceptTitle,
+            completed,
           };
         })
       );
     } catch {
       // No sessions directory
     }
+
+    // Sort sessions by startedAt descending (newest first)
+    recentSessions.sort((a, b) => {
+      const dateA = a.startedAt || a.date;
+      const dateB = b.startedAt || b.date;
+      return new Date(dateB).getTime() - new Date(dateA).getTime();
+    });
 
     return NextResponse.json({
       success: true,

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { MessageCircleQuestion, Presentation, Check, History, BookOpen } from "lucide-react";
+import { MessageCircleQuestion, Presentation, Check, History, BookOpen, RotateCcw } from "lucide-react";
 import type { LearningMode, ContentFormat } from "@/types/session";
 
 interface LastSessionInfo {
@@ -17,6 +17,8 @@ interface LearningSetupProps {
   conceptTitle: string;
   onStart: (mode: LearningMode, formats: ContentFormat[]) => void;
   onResumeLast?: (sessionId: string, mode: LearningMode, formats: ContentFormat[]) => void;
+  isReview?: boolean;
+  reviewQuestionCount?: number;
 }
 
 const FORMAT_OPTIONS: { value: ContentFormat; label: string; description: string }[] = [
@@ -55,7 +57,7 @@ const MODE_OPTIONS: {
 const MODE_LABEL: Record<string, string> = { basic: "기본형", socratic: "소크라테스", feynman: "파인만 기법" };
 const FORMAT_LABEL: Record<string, string> = { text: "텍스트", code: "코드", diagram: "다이어그램", analogy: "비유" };
 
-export function LearningSetup({ topicId, conceptTitle, onStart, onResumeLast }: LearningSetupProps) {
+export function LearningSetup({ topicId, conceptTitle, onStart, onResumeLast, isReview, reviewQuestionCount }: LearningSetupProps) {
   const [selectedFormats, setSelectedFormats] = React.useState<ContentFormat[]>(["text"]);
   const [selectedMode, setSelectedMode] = React.useState<LearningMode | null>(null);
   const [lastSession, setLastSession] = React.useState<LastSessionInfo | null>(null);
@@ -112,9 +114,15 @@ export function LearningSetup({ topicId, conceptTitle, onStart, onResumeLast }: 
     <div className="mx-auto max-w-2xl px-4 py-8">
       {/* Header */}
       <div className="mb-8 text-center">
+        {isReview && (
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary mb-3">
+            <RotateCcw className="size-3" />
+            복습 모드{reviewQuestionCount ? ` · 질문 ${reviewQuestionCount}개` : ''}
+          </div>
+        )}
         <h2 className="text-2xl font-bold">{conceptTitle}</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          학습 방식과 콘텐츠 형식을 선택하세요
+          {isReview ? '복습 학습 방식과 콘텐츠 형식을 선택하세요' : '학습 방식과 콘텐츠 형식을 선택하세요'}
         </p>
       </div>
 
@@ -216,7 +224,7 @@ export function LearningSetup({ topicId, conceptTitle, onStart, onResumeLast }: 
           onClick={handleStart}
           className="min-w-[200px]"
         >
-          새 학습 시작
+          {isReview ? '복습 시작' : '새 학습 시작'}
         </Button>
       </div>
     </div>

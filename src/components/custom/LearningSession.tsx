@@ -17,6 +17,7 @@ interface LearningSessionProps {
   roadmapItemId: string | null;
   sessionId: string;
   onSessionEnd: (messages: Message[], completed: boolean) => void;
+  reviewQuestions?: string[];
 }
 
 const NOTIFY_AT = 15 * 60; // 15분 경과 알림
@@ -30,6 +31,7 @@ export function LearningSession({
   roadmapItemId,
   sessionId,
   onSessionEnd,
+  reviewQuestions,
 }: LearningSessionProps) {
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = React.useState(false);
@@ -96,6 +98,8 @@ export function LearningSession({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const completedRef = React.useRef(false);
+
   async function saveSession(isFinalSave = false) {
     setSaveStatus("saving");
     try {
@@ -110,6 +114,7 @@ export function LearningSession({
         summary: null,
         roadmapItemId,
         elapsedSeconds: elapsed,
+        completed: completedRef.current,
       };
 
       await fetch("/api/learn/save", {
@@ -156,6 +161,7 @@ export function LearningSession({
           mode,
           formats,
           previousMessages,
+          ...(reviewQuestions && reviewQuestions.length > 0 && !previousMessages ? { reviewQuestions } : {}),
         }),
       });
 
@@ -245,6 +251,7 @@ export function LearningSession({
   }
 
   async function handleComplete() {
+    completedRef.current = true;
     await saveSession(true);
     onSessionEnd(messagesRef.current, true);
   }

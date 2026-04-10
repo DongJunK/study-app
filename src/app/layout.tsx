@@ -3,6 +3,7 @@ import { Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { SidebarWrapper } from "@/components/layout/SidebarWrapper";
+import { ClaudeGuard } from "@/components/custom/ClaudeGuard";
 import "./globals.css";
 
 const geistMono = Geist_Mono({
@@ -36,7 +37,9 @@ export default function RootLayout({
           <div className="flex h-screen">
             <SidebarWrapper />
             <main className="flex flex-1 flex-col overflow-y-auto">
-              {children}
+              <ClaudeGuard>
+                {children}
+              </ClaudeGuard>
             </main>
           </div>
           <Toaster />

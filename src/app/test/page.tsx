@@ -14,7 +14,7 @@ import { ScoreIndicator } from "@/components/custom/ScoreIndicator";
 import { useTestStore } from "@/stores/testStore";
 import type { Topic } from "@/types/topic";
 import type { TestType, TestAnswer, TestResult } from "@/types/test";
-import { ArrowLeft, CheckCircle2, XCircle, FileCheck, ClipboardCheck, Play, Shuffle, Clock, ChevronRight, X, ChevronDown } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle, FileCheck, ClipboardCheck, Play, Shuffle, Clock, ChevronRight, X, ChevronDown, RefreshCw } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useRouter } from "next/navigation";
@@ -765,6 +765,18 @@ function TestTopicSelector() {
                       <span className={`text-sm font-semibold ${r.passed ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
                         {pct}%
                       </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs gap-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/learn?topic=${r.topicId}&reviewTest=${r.id}`);
+                        }}
+                      >
+                        <RefreshCw className="size-3" />
+                        복습
+                      </Button>
                       <ChevronRight className="size-4 text-muted-foreground" />
                     </div>
                   </div>

@@ -4,7 +4,8 @@ import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft, BookOpen, TrendingUp, Target, FileCheck,
-  RotateCcw, Play, ClipboardCheck, Calendar, Award, Clock, MessageSquare
+  RotateCcw, Play, ClipboardCheck, Calendar, Award, Clock, MessageSquare, RefreshCw,
+  CheckCircle2, XCircle, X, ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +15,9 @@ import { StatCard } from "@/components/custom/StatCard";
 import { WeaknessTag } from "@/components/custom/WeaknessTag";
 import { SimpleBarChart } from "@/components/custom/SimpleBarChart";
 import type { Topic, Roadmap } from "@/types/topic";
-import type { TestResult } from "@/types/test";
+import type { TestResult, TestAnswer } from "@/types/test";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { Weakness } from "@/types/weakness";
 import type { ApiResult } from "@/types/api";
 import type { DiagnosisData } from "@/lib/data/roadmapManager";
@@ -32,6 +35,7 @@ interface SessionInfo {
   startedAt?: string;
   elapsedSeconds?: number;
   conceptTitle?: string;
+  completed?: boolean;
 }
 
 interface TopicDetailData {
@@ -44,6 +48,76 @@ interface TopicDetailData {
   growth: GrowthData | null;
 }
 
+const mdComponents = {
+  p: ({ children, ...props }: React.ComponentProps<"p">) => <p className="text-sm leading-relaxed mb-2 last:mb-0" {...props}>{children}</p>,
+  ul: ({ children, ...props }: React.ComponentProps<"ul">) => <ul className="text-sm list-disc pl-4 mb-2 space-y-1" {...props}>{children}</ul>,
+  ol: ({ children, ...props }: React.ComponentProps<"ol">) => <ol className="text-sm list-decimal pl-4 mb-2 space-y-1" {...props}>{children}</ol>,
+  li: ({ children, ...props }: React.ComponentProps<"li">) => <li className="text-sm" {...props}>{children}</li>,
+  strong: ({ children, ...props }: React.ComponentProps<"strong">) => <strong className="font-semibold" {...props}>{children}</strong>,
+  code: ({ children, ...props }: React.ComponentProps<"code">) => <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono" {...props}>{children}</code>,
+  pre: ({ children, ...props }: React.ComponentProps<"pre">) => <pre className="rounded-lg bg-muted p-3 text-xs font-mono overflow-x-auto mb-2" {...props}>{children}</pre>,
+};
+
+function AnswerDetailCard({ answer, index, isMC }: { answer: TestAnswer; index: number; isMC?: boolean }) {
+  const [expanded, setExpanded] = React.useState(false);
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <button
+        className="flex w-full items-center justify-between px-5 py-4 text-left hover:bg-muted/30 transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-center gap-3">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold">{index + 1}</span>
+          <span className="text-sm font-medium line-clamp-1">{answer.question || `질문 ${index + 1}`}</span>
+        </div>
+        <div className="flex items-center gap-2.5 shrink-0">
+          <span className="text-sm font-semibold">{answer.score}/{answer.maxScore}</span>
+          <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${answer.passed ? "bg-green-500/10 text-green-600 dark:text-green-400" : "bg-red-500/10 text-red-600 dark:text-red-400"}`}>
+            {isMC ? (answer.passed ? "정답" : "오답") : (answer.passed ? "통과" : "미달")}
+          </span>
+          <ChevronDown className={`size-4 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
+        </div>
+      </button>
+      {expanded && (
+        <div className="border-t border-border px-5 py-4 space-y-4">
+          {answer.question && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1.5">질문</p>
+              <div className="text-sm text-foreground">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{answer.question}</ReactMarkdown>
+              </div>
+            </div>
+          )}
+          {answer.userAnswer && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1.5">내 답변</p>
+              <div className={`rounded-lg border px-4 py-3 ${answer.passed ? "border-green-500/20 bg-green-500/5" : "border-red-500/20 bg-red-500/5"}`}>
+                <div className="text-sm"><ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{answer.userAnswer}</ReactMarkdown></div>
+              </div>
+            </div>
+          )}
+          {answer.modelAnswer && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1.5">모범 답변</p>
+              <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+                <div className="text-sm"><ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{answer.modelAnswer}</ReactMarkdown></div>
+              </div>
+            </div>
+          )}
+          {answer.feedback && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1.5">피드백</p>
+              <div className="rounded-lg bg-muted/50 px-4 py-3">
+                <div className="text-sm text-muted-foreground"><ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{answer.feedback}</ReactMarkdown></div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function TopicDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -51,6 +125,9 @@ export default function TopicDetailPage() {
 
   const [data, setData] = React.useState<TopicDetailData | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [selectedTestResult, setSelectedTestResult] = React.useState<TestResult | null>(null);
+  const [showAllSessions, setShowAllSessions] = React.useState(false);
+  const [showAllTests, setShowAllTests] = React.useState(false);
   const { roadmapLockEnabled } = useSettingsStore();
 
   React.useEffect(() => {
@@ -218,8 +295,8 @@ export default function TopicDetailPage() {
                 학습 이력
               </h3>
               {(() => {
-                const validSessions = recentSessions.filter(s => s.size > 0 && (s.messageCount ?? 0) > 0);
-                if (validSessions.length === 0) {
+                const completedSessions = recentSessions.filter(s => s.size > 0 && (s.messageCount ?? 0) > 0 && s.completed !== false);
+                if (completedSessions.length === 0) {
                   return <p className="text-sm text-muted-foreground text-center py-4">아직 학습 기록이 없습니다</p>;
                 }
 
@@ -239,15 +316,17 @@ export default function TopicDetailPage() {
                   return `${m}분`;
                 }
 
+                const displaySessions = showAllSessions ? completedSessions : completedSessions.slice(0, 5);
+
                 return (
                   <div className="space-y-2">
-                    {validSessions.map((s) => (
+                    {displaySessions.map((s) => (
                       <div key={s.id} className="rounded-lg border border-border bg-background px-4 py-3 space-y-1.5">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <Calendar className="size-3.5 text-muted-foreground" />
                             <span className="text-sm font-medium">
-                              {new Date(s.date).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" })}
+                              {new Date(s.date).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
                             </span>
                             {s.mode && (
                               <Badge variant="secondary" className="text-xs">
@@ -268,6 +347,15 @@ export default function TopicDetailPage() {
                                 {s.messageCount}
                               </span>
                             )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-xs gap-1"
+                              onClick={() => router.push(`/learn?topic=${topicId}&reviewSession=${s.id}`)}
+                            >
+                              <RefreshCw className="size-3" />
+                              복습
+                            </Button>
                           </div>
                         </div>
                         {s.conceptTitle && (
@@ -277,6 +365,16 @@ export default function TopicDetailPage() {
                         )}
                       </div>
                     ))}
+                    {completedSessions.length > 5 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs text-muted-foreground"
+                        onClick={() => setShowAllSessions(!showAllSessions)}
+                      >
+                        {showAllSessions ? "접기" : `더보기 (${completedSessions.length - 5}개 더)`}
+                      </Button>
+                    )}
                   </div>
                 );
               })()}
@@ -292,13 +390,20 @@ export default function TopicDetailPage() {
                 <p className="text-sm text-muted-foreground text-center py-4">아직 테스트 기록이 없습니다</p>
               ) : (
                 <div className="space-y-1">
-                  {testResults.slice(0, 10).map((t) => {
+                  {(showAllTests ? testResults : testResults.slice(0, 5)).map((t) => {
                     const pct = Math.round((t.totalScore / t.maxTotalScore) * 100);
                     return (
-                      <div key={t.id} className="flex items-center justify-between py-2.5 border-b border-border last:border-0">
+                      <div
+                        key={t.id}
+                        className="flex items-center justify-between py-2.5 border-b border-border last:border-0 cursor-pointer hover:bg-muted/30 transition-colors rounded-lg px-2 -mx-2"
+                        onClick={() => setSelectedTestResult(t)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === "Enter") setSelectedTestResult(t); }}
+                      >
                         <div className="flex items-center gap-2">
                           <Calendar className="size-3.5 text-muted-foreground" />
-                          <span className="text-sm">{new Date(t.createdAt).toLocaleDateString("ko-KR")}</span>
+                          <span className="text-sm">{new Date(t.createdAt).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
                           <Badge variant="secondary" className="text-xs">{testTypeLabel[t.type] ?? t.type}</Badge>
                         </div>
                         <div className="flex items-center gap-2">
@@ -306,10 +411,32 @@ export default function TopicDetailPage() {
                           <Badge variant={t.passed ? "default" : "outline"} className="text-xs">
                             {t.passed ? "합격" : "불합격"}
                           </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-xs gap-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/learn?topic=${topicId}&reviewTest=${t.id}`);
+                            }}
+                          >
+                            <RefreshCw className="size-3" />
+                            복습
+                          </Button>
                         </div>
                       </div>
                     );
                   })}
+                  {testResults.length > 5 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-xs text-muted-foreground mt-2"
+                      onClick={() => setShowAllTests(!showAllTests)}
+                    >
+                      {showAllTests ? "접기" : `더보기 (${testResults.length - 5}개 더)`}
+                    </Button>
+                  )}
                 </div>
               )}
             </section>
@@ -401,6 +528,49 @@ export default function TopicDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Test detail modal */}
+      {selectedTestResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setSelectedTestResult(null)}>
+          <div
+            className="w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl border border-border bg-card shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-6 py-4 rounded-t-2xl">
+              <div>
+                <h3 className="text-base font-semibold">테스트 상세</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {testTypeLabel[selectedTestResult.type] ?? selectedTestResult.type} &middot; {new Date(selectedTestResult.createdAt).toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                </p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedTestResult(null)} className="size-8 p-0">
+                <X className="size-4" />
+              </Button>
+            </div>
+            <div className="p-6 space-y-5">
+              {(() => {
+                const pct = selectedTestResult.maxTotalScore > 0 ? Math.round((selectedTestResult.totalScore / selectedTestResult.maxTotalScore) * 100) : 0;
+                return (
+                  <div className={`flex items-center justify-center gap-4 rounded-xl border p-5 ${selectedTestResult.passed ? "border-emerald-500/30 bg-emerald-500/5" : "border-red-500/30 bg-red-500/5"}`}>
+                    {selectedTestResult.passed ? <CheckCircle2 className="size-8 text-emerald-500" /> : <XCircle className="size-8 text-red-500" />}
+                    <div className="text-center">
+                      <p className={`text-2xl font-bold ${selectedTestResult.passed ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                        {selectedTestResult.totalScore} / {selectedTestResult.maxTotalScore} ({pct}%)
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{selectedTestResult.passed ? "합격" : "불합격"} (합격선: 70%)</p>
+                    </div>
+                  </div>
+                );
+              })()}
+              <div className="space-y-3">
+                {selectedTestResult.answers.map((a, idx) => (
+                  <AnswerDetailCard key={idx} answer={a} index={idx} isMC={selectedTestResult.type === "multiple-choice"} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

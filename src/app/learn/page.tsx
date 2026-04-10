@@ -45,6 +45,8 @@ function LearnContent() {
   const itemParam = searchParams.get("item");
   const resumeParam = searchParams.get("resume");
   const rediagnoseParam = searchParams.get("rediagnose");
+  const reviewSessionParam = searchParams.get("reviewSession");
+  const reviewTestParam = searchParams.get("reviewTest");
 
   const [phase, setPhase] = React.useState<LearnPhase>("loading");
   const [topic, setTopic] = React.useState<Topic | null>(null);
@@ -54,6 +56,8 @@ function LearnContent() {
   const [learningFormats, setLearningFormats] = React.useState<ContentFormat[]>(["text"]);
   const [sessionId, setSessionId] = React.useState<string>("");
   const [summaryData, setSummaryData] = React.useState<SummaryData | null>(null);
+  const [reviewQuestions, setReviewQuestions] = React.useState<string[]>([]);
+  const [isReviewMode, setIsReviewMode] = React.useState(false);
   const { reset } = useSessionStore();
 
   // Reset session store on mount or topic change
@@ -94,6 +98,66 @@ function LearnContent() {
           toast.info("수준 재진단을 시작합니다");
           setPhase("diagnosis");
           return;
+        }
+
+        // Handle review mode: fetch questions from session or test
+        if (reviewSessionParam) {
+          try {
+            const sessionRes = await fetch(`/api/learn/session?topicId=${topicId}&sessionId=${reviewSessionParam}`);
+            const sessionJson = await sessionRes.json();
+            if (sessionJson.success && sessionJson.data) {
+              const session = sessionJson.data;
+              // Extract assistant questions from the session messages
+              const questions = session.messages
+                .filter((m: { role: string; content: string }) => m.role === "assistant")
+                .map((m: { role: string; content: string }) => m.content);
+              if (questions.length > 0) {
+                setReviewQuestions(questions);
+                setIsReviewMode(true);
+                // Get concept title from roadmap item or fallback
+                let conceptTitle = "복습";
+                if (session.roadmapItemId) {
+                  const rmRes = await fetch(`/api/topics/${topicId}/roadmap`).catch(() => null);
+                  if (rmRes) {
+                    const rmJson = await rmRes.json();
+                    if (rmJson.success && rmJson.data) {
+                      const item = rmJson.data.items.find((i: RoadmapItem) => i.id === session.roadmapItemId);
+                      if (item) conceptTitle = item.title;
+                    }
+                  }
+                }
+                setSelectedItem({ id: "review", title: conceptTitle, order: 0, status: "available", isCustom: false });
+                toast.info("복습 학습을 준비합니다");
+                setPhase("setup");
+                return;
+              }
+            }
+          } catch { /* fall through to normal flow */ }
+        }
+
+        if (reviewTestParam) {
+          try {
+            const detailRes = await fetch(`/api/topics/${topicId}/detail`);
+            const detailJson = await detailRes.json();
+            if (detailJson.success) {
+              const testResult = detailJson.data.testResults.find((t: { id: string }) => t.id === reviewTestParam);
+              if (testResult && testResult.answers.length > 0) {
+                const questions = testResult.answers.map((a: { question: string }) => a.question);
+                setReviewQuestions(questions);
+                setIsReviewMode(true);
+                const typeLabel: Record<string, string> = {
+                  "deep-learning": "깊은 학습",
+                  "multiple-choice": "객관식",
+                  "short-answer": "주관식",
+                };
+                const conceptTitle = `테스트 복습 (${typeLabel[testResult.type] || testResult.type})`;
+                setSelectedItem({ id: "review", title: conceptTitle, order: 0, status: "available", isCustom: false });
+                toast.info("테스트 복습 학습을 준비합니다");
+                setPhase("setup");
+                return;
+              }
+            }
+          } catch { /* fall through to normal flow */ }
         }
 
         // Check diagnosis status
@@ -485,12 +549,14 @@ function LearnContent() {
           topicId={topic.id}
           conceptTitle={selectedItem.title}
           onStart={handleSetupStart}
-          onResumeLast={(sid, mode, formats) => {
+          onResumeLast={isReviewMode ? undefined : (sid, mode, formats) => {
             setLearningMode(mode);
             setLearningFormats(formats);
             setSessionId(sid);
             setPhase("learning");
           }}
+          isReview={isReviewMode}
+          reviewQuestionCount={reviewQuestions.length}
         />
       </main>
     );
@@ -505,9 +571,10 @@ function LearnContent() {
           conceptTitle={selectedItem.title}
           mode={learningMode}
           formats={learningFormats}
-          roadmapItemId={selectedItem.id}
+          roadmapItemId={isReviewMode ? null : selectedItem.id}
           sessionId={sessionId}
           onSessionEnd={handleSessionEnd}
+          reviewQuestions={isReviewMode ? reviewQuestions : undefined}
         />
       </main>
     );

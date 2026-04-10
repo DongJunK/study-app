@@ -18,6 +18,7 @@ export interface LearningSession {
   summary: string | null;
   roadmapItemId: string | null;
   elapsedSeconds?: number;
+  completed?: boolean;
 }
 
 export interface LastSession {

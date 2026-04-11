@@ -12,17 +12,19 @@ import type { Message } from "@/types/session";
  * extracted feedback text so users see readable content instead of raw JSON.
  */
 function stripJsonBlocks(text: string): string {
-  return text.replace(/```json\s*\n?([\s\S]*?)```/g, (_match, jsonStr) => {
+  return text.replace(/```json\s*\n?([\s\S]*?)```/g, (match, jsonStr) => {
     try {
       const parsed = JSON.parse(jsonStr.trim());
       // Skip final/summary blocks entirely
       if (parsed.type === "final") return "";
       // Extract feedback from scoring blocks
       if (parsed.feedback) return parsed.feedback;
+      // Valid JSON but no special handling — keep original block
+      return match;
     } catch {
-      // Not valid JSON, remove the block
+      // Not valid JSON (e.g. contains comments) — keep original block
+      return match;
     }
-    return "";
   }).trim();
 }
 

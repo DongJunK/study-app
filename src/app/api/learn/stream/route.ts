@@ -12,14 +12,14 @@ export async function POST(request: Request) {
       conceptTitle,
       mode,
       formats,
-      previousMessages,
+      sessionFilePath,
       reviewQuestions,
     } = body as {
       topicName: string;
       conceptTitle: string;
       mode: LearningMode;
       formats: ContentFormat[];
-      previousMessages?: string;
+      sessionFilePath?: string;
       reviewQuestions?: string[];
     };
 
@@ -53,8 +53,8 @@ export async function POST(request: Request) {
 
     // Build the user prompt with conversation context
     let prompt: string;
-    if (previousMessages) {
-      prompt = `이전 대화 내용:\n${previousMessages}\n\n위 대화를 이어서 진행하세요.`;
+    if (sessionFilePath) {
+      prompt = `이전 대화 기록이 "${sessionFilePath}" 파일에 저장되어 있습니다. 이 파일을 Read 도구로 읽어서 대화 맥락을 파악한 후, 교사로서 다음 응답을 이어가세요. 파일의 messages 배열에서 role이 "user"인 것은 학생의 발언이고, "assistant"인 것은 당신의 이전 발언입니다. 절대로 학생의 발언을 대신 생성하지 마세요.`;
     } else if (reviewQuestions && reviewQuestions.length > 0) {
       prompt = '복습 학습을 시작합니다. 첫 번째 복습 질문을 해주세요.';
     } else {

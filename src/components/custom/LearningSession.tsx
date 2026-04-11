@@ -5,7 +5,7 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { Button } from "@/components/ui/button";
 import { StreamingChat } from "@/components/custom/StreamingChat/StreamingChat";
-import { Clock, CheckCircle, FlaskConical } from "lucide-react";
+import { Clock, CheckCircle, FlaskConical, Loader2 } from "lucide-react";
 import type { Message, LearningMode, ContentFormat, LearningSession as LearningSessionType } from "@/types/session";
 
 interface LearningSessionProps {
@@ -39,6 +39,7 @@ export function LearningSession({
   const [notified, setNotified] = React.useState(false);
   const [saveStatus, setSaveStatus] = React.useState<"idle" | "saving" | "saved">("idle");
   const [initialized, setInitialized] = React.useState(false);
+  const [completing, setCompleting] = React.useState(false);
 
   const saveTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveIndicatorRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -134,13 +135,10 @@ export function LearningSession({
   async function fetchStreamingResponse(userMessage?: string) {
     setIsStreaming(true);
 
-    // Build previous messages context
+    // Save current session before requesting AI response so the file is up-to-date
     const currentMessages = messagesRef.current;
-    let previousMessages: string | undefined;
     if (currentMessages.length > 0) {
-      previousMessages = currentMessages
-        .map((m) => `${m.role === "user" ? "학생" : "교사"}: ${m.content}`)
-        .join("\n\n");
+      await saveSession();
     }
 
     // Add placeholder for AI response
@@ -160,8 +158,8 @@ export function LearningSession({
           conceptTitle,
           mode,
           formats,
-          previousMessages,
-          ...(reviewQuestions && reviewQuestions.length > 0 && !previousMessages ? { reviewQuestions } : {}),
+          ...(currentMessages.length > 0 ? { sessionFilePath: `data/topics/${topicId}/sessions/${sessionId}.json` } : {}),
+          ...(reviewQuestions && reviewQuestions.length > 0 && currentMessages.length === 0 ? { reviewQuestions } : {}),
         }),
       });
 
@@ -251,6 +249,7 @@ export function LearningSession({
   }
 
   async function handleComplete() {
+    setCompleting(true);
     completedRef.current = true;
     await saveSession(true);
     onSessionEnd(messagesRef.current, true);
@@ -299,18 +298,30 @@ export function LearningSession({
           <Link
             href={`/test?topic=${topicId}`}
             className={buttonVariants({ variant: "outline", size: "sm" })}
+            aria-disabled={completing}
+            onClick={completing ? (e) => e.preventDefault() : undefined}
+            style={completing ? { pointerEvents: "none", opacity: 0.5 } : undefined}
           >
             테스트로 전환
           </Link>
 
           {/* Complete learning button */}
-          <Button size="sm" onClick={handleComplete} disabled={isStreaming} className="gap-1.5">
-            <CheckCircle className="size-3.5" />
-            학습 완료
+          <Button size="sm" onClick={handleComplete} disabled={isStreaming || completing} className="gap-1.5">
+            {completing ? (
+              <>
+                <Loader2 className="size-3.5 animate-spin" />
+                완료 처리 중...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="size-3.5" />
+                학습 완료
+              </>
+            )}
           </Button>
 
           {/* End session button */}
-          <Button variant="ghost" size="sm" onClick={handleEndSession}>
+          <Button variant="ghost" size="sm" onClick={handleEndSession} disabled={completing}>
             나가기
           </Button>
         </div>

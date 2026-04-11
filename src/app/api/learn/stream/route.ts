@@ -12,6 +12,7 @@ export async function POST(request: Request) {
       conceptTitle,
       mode,
       formats,
+      recentMessages,
       sessionFilePath,
       reviewQuestions,
     } = body as {
@@ -19,6 +20,7 @@ export async function POST(request: Request) {
       conceptTitle: string;
       mode: LearningMode;
       formats: ContentFormat[];
+      recentMessages?: string;
       sessionFilePath?: string;
       reviewQuestions?: string[];
     };
@@ -53,8 +55,14 @@ export async function POST(request: Request) {
 
     // Build the user prompt with conversation context
     let prompt: string;
-    if (sessionFilePath) {
-      prompt = `이전 대화 기록이 "${sessionFilePath}" 파일에 저장되어 있습니다. 이 파일을 Read 도구로 읽어서 대화 맥락을 파악한 후, 교사로서 다음 응답을 이어가세요. 파일의 messages 배열에서 role이 "user"인 것은 학생의 발언이고, "assistant"인 것은 당신의 이전 발언입니다. 절대로 학생의 발언을 대신 생성하지 마세요.`;
+    if (recentMessages) {
+      if (sessionFilePath) {
+        // Long conversation: recent messages in prompt + file for full history
+        prompt = `아래는 최근 대화 기록입니다. [교사]는 당신의 이전 발언이고, [학생]은 학생의 발언입니다.\n\n${recentMessages}\n\n위는 최근 대화 일부입니다. 전체 대화 기록은 "${sessionFilePath}" 파일에 저장되어 있으니, 이전 맥락이 필요하면 Read 도구로 읽어보세요.\n교사로서 다음 응답을 이어가세요.`;
+      } else {
+        // Short conversation: all messages fit in prompt
+        prompt = `아래는 이전 대화 기록입니다. [교사]는 당신의 이전 발언이고, [학생]은 학생의 발언입니다.\n\n${recentMessages}\n\n위 대화에 이어서 교사로서 다음 응답을 하세요.`;
+      }
     } else if (reviewQuestions && reviewQuestions.length > 0) {
       prompt = '복습 학습을 시작합니다. 첫 번째 복습 질문을 해주세요.';
     } else {

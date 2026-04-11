@@ -135,10 +135,24 @@ export function LearningSession({
   async function fetchStreamingResponse(userMessage?: string) {
     setIsStreaming(true);
 
-    // Save current session before requesting AI response so the file is up-to-date
     const currentMessages = messagesRef.current;
-    if (currentMessages.length > 0) {
+    const hasHistory = currentMessages.length > 0;
+
+    // Save session so the file is up-to-date for full history reference
+    if (hasHistory) {
       await saveSession();
+    }
+
+    // Build recent messages for direct prompt inclusion (fast path)
+    const RECENT_COUNT = 20;
+    let recentMessages: string | undefined;
+    if (hasHistory) {
+      const recent = currentMessages.length > RECENT_COUNT
+        ? currentMessages.slice(-RECENT_COUNT)
+        : currentMessages;
+      recentMessages = recent
+        .map((m) => `[${m.role === "user" ? "학생" : "교사"}]\n${m.content}`)
+        .join("\n\n---\n\n");
     }
 
     // Add placeholder for AI response
@@ -158,8 +172,9 @@ export function LearningSession({
           conceptTitle,
           mode,
           formats,
-          ...(currentMessages.length > 0 ? { sessionFilePath: `data/topics/${topicId}/sessions/${sessionId}.json` } : {}),
-          ...(reviewQuestions && reviewQuestions.length > 0 && currentMessages.length === 0 ? { reviewQuestions } : {}),
+          ...(recentMessages ? { recentMessages } : {}),
+          ...(currentMessages.length > RECENT_COUNT ? { sessionFilePath: `data/topics/${topicId}/sessions/${sessionId}.json` } : {}),
+          ...(reviewQuestions && reviewQuestions.length > 0 && !hasHistory ? { reviewQuestions } : {}),
         }),
       });
 

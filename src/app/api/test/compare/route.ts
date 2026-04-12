@@ -4,19 +4,19 @@ import { getAnswerComparePrompt } from '@/lib/prompts/answer-compare';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { question, userAnswer } = body as { question: string; userAnswer: string };
+    const { answers } = body as { answers: { question: string; userAnswer: string }[] };
 
-    if (!question || !userAnswer) {
+    if (!answers || answers.length === 0) {
       return Response.json(
         {
           success: false,
-          error: { message: 'question and userAnswer are required', code: 'INVALID_PARAMS' },
+          error: { message: 'answers array is required', code: 'INVALID_PARAMS' },
         },
         { status: 400 }
       );
     }
 
-    const prompt = getAnswerComparePrompt(userAnswer, question);
+    const prompt = getAnswerComparePrompt(answers);
     const response = await askClaude(prompt);
 
     // Parse the JSON from Claude's response
@@ -24,14 +24,12 @@ export async function POST(request: Request) {
     if (jsonMatch) {
       try {
         const parsed = JSON.parse(jsonMatch[1].trim());
-        return Response.json({
-          success: true,
-          data: {
-            modelAnswer: parsed.modelAnswer || '',
-            gaps: parsed.gaps || [],
-            feedback: parsed.feedback || '',
-          },
-        });
+        if (Array.isArray(parsed.results)) {
+          return Response.json({
+            success: true,
+            data: { results: parsed.results },
+          });
+        }
       } catch {
         // Fall through to raw response
       }
@@ -40,9 +38,13 @@ export async function POST(request: Request) {
     return Response.json({
       success: true,
       data: {
-        modelAnswer: response.text,
-        gaps: [],
-        feedback: '',
+        results: answers.map((a, i) => ({
+          questionIndex: i + 1,
+          question: a.question,
+          modelAnswer: response.text,
+          gaps: [],
+          feedback: '',
+        })),
       },
     });
   } catch {

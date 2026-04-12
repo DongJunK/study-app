@@ -3,6 +3,7 @@ import { getDeepTestPrompt, getStrategicTestPrompt } from '@/lib/prompts/deep-te
 import { getMultipleChoicePrompt, getShortAnswerPrompt } from '@/lib/prompts/quiz';
 import { getWeaknesses } from '@/lib/data/weaknessManager';
 import { getRoadmap } from '@/lib/data/roadmapManager';
+import { getTestResults } from '@/lib/data/testManager';
 import type { TestType } from '@/types/test';
 
 export async function POST(request: Request) {
@@ -43,15 +44,25 @@ export async function POST(request: Request) {
 
       systemPrompt = getStrategicTestPrompt(topicName, concepts || [], weaknessNames, learnedConcepts);
     } else {
+      // Fetch previous test results for score-based question strategy
+      const allTestResults = await getTestResults(topicId);
+      const previousResults = allTestResults
+        .filter(r => r.type === type)
+        .flatMap(r => r.answers.map(a => ({
+          question: a.question,
+          score: a.score,
+          maxScore: a.maxScore,
+        })));
+
       switch (type) {
         case 'deep-learning':
           systemPrompt = getDeepTestPrompt(topicName, concepts || []);
           break;
         case 'multiple-choice':
-          systemPrompt = getMultipleChoicePrompt(topicName, concepts || []);
+          systemPrompt = getMultipleChoicePrompt(topicName, concepts || [], previousResults);
           break;
         case 'short-answer':
-          systemPrompt = getShortAnswerPrompt(topicName, concepts || []);
+          systemPrompt = getShortAnswerPrompt(topicName, concepts || [], previousResults);
           break;
         default:
           return Response.json(

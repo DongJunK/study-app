@@ -157,7 +157,8 @@ export function TestSession({
         // Check for final summary
         if (parsed.type === "final") {
           // Multiple-choice: bulk scoring from results array
-          if (Array.isArray(parsed.results)) {
+          // Only add answers from final block if no real-time answers exist (multiple-choice)
+          if (Array.isArray(parsed.results) && questionCountRef.current === 0) {
             for (const r of parsed.results) {
               questionCountRef.current += 1;
               const answer: TestAnswer = {
@@ -167,7 +168,7 @@ export function TestSession({
                 modelAnswer: r.correctAnswer || "",
                 score: r.score ?? (r.correct ? 10 : 0),
                 maxScore: r.maxScore ?? 10,
-                passed: r.correct ?? r.score >= 7,
+                passed: (r.score ?? 0) / (r.maxScore ?? 10) >= 0.7,
                 feedback: r.feedback || "",
               };
               addAnswer(answer);
@@ -209,7 +210,7 @@ export function TestSession({
             modelAnswer: parsed.modelAnswer || parsed.correctAnswer || "",
             score: parsed.score,
             maxScore: parsed.maxScore,
-            passed: parsed.passed ?? parsed.score >= 7,
+            passed: parsed.score / parsed.maxScore >= 0.7,
             feedback: parsed.feedback || "",
           };
           addAnswer(answer);

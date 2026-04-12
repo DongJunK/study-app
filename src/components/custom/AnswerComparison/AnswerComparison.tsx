@@ -3,6 +3,43 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Send } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
+const mdComponents = {
+  p: ({ children, ...props }: React.ComponentPropsWithoutRef<"p">) => (
+    <p className="mb-2 last:mb-0" {...props}>{children}</p>
+  ),
+  ul: ({ children, ...props }: React.ComponentPropsWithoutRef<"ul">) => (
+    <ul className="mb-2 list-disc pl-5 space-y-1" {...props}>{children}</ul>
+  ),
+  ol: ({ children, ...props }: React.ComponentPropsWithoutRef<"ol">) => (
+    <ol className="mb-2 list-decimal pl-5 space-y-1" {...props}>{children}</ol>
+  ),
+  li: ({ children, ...props }: React.ComponentPropsWithoutRef<"li">) => (
+    <li className="text-sm" {...props}>{children}</li>
+  ),
+  strong: ({ children, ...props }: React.ComponentPropsWithoutRef<"strong">) => (
+    <strong className="font-semibold" {...props}>{children}</strong>
+  ),
+  code: ({ children, className, ...props }: React.ComponentPropsWithoutRef<"code"> & { className?: string }) => {
+    const isInline = !className;
+    return isInline ? (
+      <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono" {...props}>{children}</code>
+    ) : (
+      <code className={`${className} text-xs font-mono`} {...props}>{children}</code>
+    );
+  },
+  pre: ({ children, ...props }: React.ComponentPropsWithoutRef<"pre">) => (
+    <pre className="mb-2 overflow-x-auto rounded-lg bg-muted p-3 text-xs" {...props}>{children}</pre>
+  ),
+  h3: ({ children, ...props }: React.ComponentPropsWithoutRef<"h3">) => (
+    <h3 className="mb-1 text-sm font-semibold" {...props}>{children}</h3>
+  ),
+  h4: ({ children, ...props }: React.ComponentPropsWithoutRef<"h4">) => (
+    <h4 className="mb-1 text-sm font-medium" {...props}>{children}</h4>
+  ),
+};
 
 interface AnswerComparisonProps {
   userAnswer: string;
@@ -38,9 +75,9 @@ export function AnswerComparison({
           <h3 className="mb-3 text-sm font-semibold text-muted-foreground">
             내 답변
           </h3>
-          <p className="whitespace-pre-wrap text-sm leading-relaxed">
-            {userAnswer}
-          </p>
+          <div className="text-sm leading-relaxed prose-sm">
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{userAnswer}</ReactMarkdown>
+          </div>
         </div>
 
         {/* Model answer */}
@@ -48,9 +85,9 @@ export function AnswerComparison({
           <h3 className="mb-3 text-sm font-semibold text-primary">
             모범답안
           </h3>
-          <p className="whitespace-pre-wrap text-sm leading-relaxed">
-            {modelAnswer}
-          </p>
+          <div className="text-sm leading-relaxed prose-sm">
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{modelAnswer}</ReactMarkdown>
+          </div>
         </div>
       </div>
 
@@ -81,9 +118,9 @@ export function AnswerComparison({
           <h3 className="mb-2 text-sm font-semibold text-muted-foreground">
             종합 피드백
           </h3>
-          <p className="whitespace-pre-wrap text-sm leading-relaxed">
-            {feedback}
-          </p>
+          <div className="text-sm leading-relaxed prose-sm">
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{feedback}</ReactMarkdown>
+          </div>
         </div>
       )}
 

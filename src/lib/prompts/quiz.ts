@@ -43,14 +43,30 @@ ${strategicSection}
 - 반드시 10문제를 생성하세요.`;
 }
 
-export function getMultipleChoicePrompt(topicName: string, concepts: string[]): string {
+export function getMultipleChoicePrompt(topicName: string, concepts: string[], previousResults?: { question: string; score: number; maxScore: number }[]): string {
   const conceptList = concepts.length > 0 ? concepts.join(', ') : topicName;
+
+  const prevSection = previousResults && previousResults.length > 0 ? `
+## 이전 테스트 결과 기반 출제 전략
+아래는 이전 테스트에서 출제된 문제와 점수입니다. 이를 참고하여 출제하세요.
+
+### 출제 규칙
+| 이전 점수 | 전략 |
+|-----------|------|
+| 7점 이상 | 해당 개념은 제외하거나 더 심화된 관점으로 출제 |
+| 4-6점 | 같은 개념을 다른 각도로 재출제 |
+| 1-3점 | 같은 개념을 우선 재출제 |
+| 미출제 | 새로운 개념으로 출제 |
+
+### 이전 테스트 이력
+${previousResults.map((r, i) => `${i + 1}. [${r.score}/${r.maxScore}점] ${r.question}`).join('\n')}
+` : '';
 
   return `당신은 "${topicName}" 분야의 객관식 퀴즈 출제 전문가입니다.
 
 ## 퀴즈 대상 개념
 ${conceptList}
-
+${prevSection}
 ## 진행 방식
 1. 4지선다 객관식 문제를 하나씩 출제하세요.
 2. 총 5문제를 출제합니다.
@@ -110,14 +126,30 @@ ${conceptList}
 - 첫 번째 문제를 바로 시작하세요`;
 }
 
-export function getShortAnswerPrompt(topicName: string, concepts: string[]): string {
+export function getShortAnswerPrompt(topicName: string, concepts: string[], previousResults?: { question: string; score: number; maxScore: number }[]): string {
   const conceptList = concepts.length > 0 ? concepts.join(', ') : topicName;
+
+  const prevSection = previousResults && previousResults.length > 0 ? `
+## 이전 테스트 결과 기반 출제 전략
+아래는 이전 테스트에서 출제된 문제와 점수입니다. 이를 참고하여 출제하세요.
+
+### 출제 규칙
+| 이전 점수 | 전략 |
+|-----------|------|
+| 7점 이상 | 해당 개념은 제외하거나 더 심화된 관점으로 출제 |
+| 4-6점 | 같은 개념을 다른 각도로 재출제 |
+| 1-3점 | 같은 개념을 우선 재출제 |
+| 미출제 | 새로운 개념으로 출제 |
+
+### 이전 테스트 이력
+${previousResults.map((r, i) => `${i + 1}. [${r.score}/${r.maxScore}점] ${r.question}`).join('\n')}
+` : '';
 
   return `당신은 "${topicName}" 분야의 주관식 퀴즈 출제 전문가입니다.
 
 ## 퀴즈 대상 개념
 ${conceptList}
-
+${prevSection}
 ## 진행 방식
 1. 서술형 주관식 문제를 하나씩 출제하세요.
 2. 총 5문제를 출제합니다.
@@ -133,16 +165,35 @@ ${conceptList}
 ## 채점 기준
 - 1-3점: 핵심 개념 누락, 부정확한 설명
 - 4-6점: 기본 이해는 있으나 깊이 부족
-- 7-8점: 정확하고 체계적인 설명
-- 9-10점: 심화 내용까지 포함한 완벽한 답변
+- 7-9점: 정확하고 체계적인 설명
+- 10점: 심화 내용까지 포함한 완벽한 답변
 
 ## 응답 형식
-학생의 답변 후 반드시 다음 JSON을 포함하세요 (반드시 \`\`\`json 코드 블록으로 감싸세요):
+학생의 답변 후 반드시 아래 마크다운 구조로 피드백을 작성한 뒤, 마지막에 JSON을 포함하세요.
+
+### 피드백 텍스트 (JSON 앞에 반드시 이 형식으로 작성):
+
+**✅ 맞은 부분**
+- 맞은 포인트 1
+- 맞은 포인트 2
+
+**❌ 부족한 부분**
+- 부족한 포인트 1
+- 부족한 포인트 2
+
+**📝 핵심 포인트**
+- 모범답안 핵심 1
+- 모범답안 핵심 2
+
+### 채점 JSON (피드백 텍스트 뒤에 반드시 포함, \`\`\`json 코드 블록으로 감싸세요):
 
 \`\`\`json
-{"score": N, "maxScore": 10, "passed": true/false, "feedback": "구체적 피드백"}
+{"score": N, "maxScore": 10, "passed": true/false, "feedback": "한 줄 요약 피드백"}
 \`\`\`
 
+- 반드시 세 섹션(**✅ 맞은 부분**, **❌ 부족한 부분**, **📝 핵심 포인트**)을 모두 포함
+- 각 섹션은 마크다운 리스트(- )로 작성
+- 피드백을 한 문단으로 쓰지 말고, 반드시 위 구조를 따를 것
 - passed 기준: score >= 7
 
 ## 종합 평가

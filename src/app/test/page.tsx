@@ -51,8 +51,8 @@ function AnswerDetailCard({ answer, index, isMC }: { answer: TestAnswer; index: 
           <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold">
             {index + 1}
           </span>
-          <span className="text-sm font-medium line-clamp-1">
-            {answer.question || `질문 ${index + 1}`}
+          <span className="text-sm font-medium">
+            문제 {index + 1}
           </span>
         </div>
         <div className="flex items-center gap-2.5 shrink-0">
@@ -141,9 +141,13 @@ function TestPageContent() {
   const [loading, setLoading] = React.useState(true);
   const [completedAnswers, setCompletedAnswers] = React.useState<TestAnswer[]>([]);
   const [comparison, setComparison] = React.useState<{
-    modelAnswer: string;
-    gaps: string[];
-    feedback: string;
+    results: {
+      questionIndex: number;
+      question: string;
+      modelAnswer: string;
+      gaps: string[];
+      feedback: string;
+    }[];
   } | null>(null);
   const [testResultId, setTestResultId] = React.useState<string>("");
   const [comparingLoading, setComparingLoading] = React.useState(false);
@@ -271,15 +275,15 @@ function TestPageContent() {
     if (completedAnswers.length === 0) return;
     setComparingLoading(true);
 
-    // Use the last answered question for comparison
-    const lastAnswer = completedAnswers[completedAnswers.length - 1];
     try {
       const res = await fetch("/api/test/compare", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          question: lastAnswer.question || "마지막 테스트 질문",
-          userAnswer: lastAnswer.userAnswer || lastAnswer.feedback,
+          answers: completedAnswers.map((a) => ({
+            question: a.question || "",
+            userAnswer: a.userAnswer || "",
+          })),
         }),
       });
       const data = await res.json();
@@ -439,14 +443,6 @@ function TestPageContent() {
             >
               다시 테스트
             </Button>
-            {currentTest?.type !== "multiple-choice" && (
-              <Button
-                onClick={handleRequestComparison}
-                disabled={comparingLoading}
-              >
-                {comparingLoading ? "분석 중..." : "모범답안 비교"}
-              </Button>
-            )}
           </div>
         </div>
         </div>
@@ -461,17 +457,19 @@ function TestPageContent() {
             <div className="mt-2"><p className="text-muted-foreground">{topic.name}</p>{allTopicNames.length > 0 && (<div className="flex flex-wrap justify-center gap-1.5 mt-2">{allTopicNames.map((n) => (<span key={n} className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">{n}</span>))}</div>)}</div>
           </div>
 
-          <AnswerComparison
-            userAnswer={
-              completedAnswers.length > 0
-                ? completedAnswers[completedAnswers.length - 1].feedback
-                : ""
-            }
-            modelAnswer={comparison.modelAnswer}
-            gaps={comparison.gaps}
-            feedback={comparison.feedback}
-            onFollowUp={handleFollowUp}
-          />
+          {comparison.results.map((result, idx) => (
+            <div key={idx} className="space-y-2">
+              <h2 className="text-lg font-semibold">문제 {idx + 1}</h2>
+              <p className="text-sm text-muted-foreground mb-3">{result.question}</p>
+              <AnswerComparison
+                userAnswer={completedAnswers[idx]?.userAnswer || ""}
+                modelAnswer={result.modelAnswer}
+                gaps={result.gaps || []}
+                feedback={result.feedback || ""}
+                onFollowUp={handleFollowUp}
+              />
+            </div>
+          ))}
 
           <div className="flex justify-center">
             <Button variant="outline" onClick={() => setPhase("results")}>
@@ -491,22 +489,23 @@ function TestPageContent() {
             <div className="mt-2"><p className="text-muted-foreground">{topic.name}</p>{allTopicNames.length > 0 && (<div className="flex flex-wrap justify-center gap-1.5 mt-2">{allTopicNames.map((n) => (<span key={n} className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">{n}</span>))}</div>)}</div>
           </div>
 
-          <AnswerComparison
-            userAnswer={
-              completedAnswers.length > 0
-                ? completedAnswers[completedAnswers.length - 1].feedback
-                : ""
-            }
-            modelAnswer={comparison.modelAnswer}
-            gaps={comparison.gaps}
-            feedback={comparison.feedback}
-            onFollowUp={() => {}}
-          />
+          {comparison.results.map((result, idx) => (
+            <div key={idx} className="space-y-2">
+              <h2 className="text-lg font-semibold">문제 {idx + 1}</h2>
+              <AnswerComparison
+                userAnswer={completedAnswers[idx]?.userAnswer || ""}
+                modelAnswer={result.modelAnswer}
+                gaps={result.gaps || []}
+                feedback={result.feedback || ""}
+                onFollowUp={() => {}}
+              />
+            </div>
+          ))}
 
           <FollowUpChat
             topicId={topic.id}
             testId={testResultId}
-            modelAnswer={comparison.modelAnswer}
+            modelAnswer={comparison.results.map(r => r.modelAnswer).join("\n\n")}
             onComplete={handleFollowUpComplete}
           />
         </div>

@@ -12,7 +12,8 @@ export async function POST(request: Request) {
       conceptTitle,
       mode,
       formats,
-      recentMessages,
+      conversationHistory,
+      lastUserMessage,
       sessionFilePath,
       reviewQuestions,
     } = body as {
@@ -20,7 +21,8 @@ export async function POST(request: Request) {
       conceptTitle: string;
       mode: LearningMode;
       formats: ContentFormat[];
-      recentMessages?: string;
+      conversationHistory?: string;
+      lastUserMessage?: string;
       sessionFilePath?: string;
       reviewQuestions?: string[];
     };
@@ -53,16 +55,18 @@ export async function POST(request: Request) {
       systemPrompt += `\n\n## 복습 모드\n이것은 복습 학습입니다. 아래의 질문들을 반드시 주어진 순서대로 하나씩 출제하세요.\n학생이 각 질문에 답변하면 피드백을 제공한 후 다음 질문으로 넘어가세요.\n모든 질문을 완료하면 전체 복습 요약을 제공하세요.\n\n### 복습 질문 목록:\n${questionList}`;
     }
 
-    // Build the user prompt with conversation context
-    let prompt: string;
-    if (recentMessages) {
+    // Append conversation history to system prompt (NOT user prompt)
+    if (conversationHistory) {
+      systemPrompt += `\n\n## 지금까지의 대화 기록\n아래는 지금까지의 대화입니다. 이 맥락을 참고하여 교사로서 응답하세요.\n\n${conversationHistory}`;
       if (sessionFilePath) {
-        // Long conversation: recent messages in prompt + file for full history
-        prompt = `아래는 최근 대화 기록입니다. [교사]는 당신의 이전 발언이고, [학생]은 학생의 발언입니다.\n\n${recentMessages}\n\n위는 최근 대화 일부입니다. 전체 대화 기록은 "${sessionFilePath}" 파일에 저장되어 있으니, 이전 맥락이 필요하면 Read 도구로 읽어보세요.\n교사로서 다음 응답을 이어가세요.`;
-      } else {
-        // Short conversation: all messages fit in prompt
-        prompt = `아래는 이전 대화 기록입니다. [교사]는 당신의 이전 발언이고, [학생]은 학생의 발언입니다.\n\n${recentMessages}\n\n위 대화에 이어서 교사로서 다음 응답을 하세요.`;
+        systemPrompt += `\n\n(전체 대화 기록은 "${sessionFilePath}" 파일에 저장되어 있습니다. 이전 맥락이 필요하면 Read 도구로 읽어보세요.)`;
       }
+    }
+
+    // User prompt: only the student's latest message (prevents role confusion)
+    let prompt: string;
+    if (lastUserMessage) {
+      prompt = lastUserMessage;
     } else if (reviewQuestions && reviewQuestions.length > 0) {
       prompt = '복습 학습을 시작합니다. 첫 번째 복습 질문을 해주세요.';
     } else {

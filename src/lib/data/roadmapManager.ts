@@ -100,19 +100,15 @@ export async function updateLevelFromTestResults(
       (oldLevel === 'intermediate' && newLevel === 'advanced');
 
     diagnosis.level = newLevel;
+    // Remove any previous level change notes
+    diagnosis.summary = diagnosis.summary.replace(/\s*\(최근 테스트 결과에 따라[^)]*\)/g, '');
+    // Update level label in summary
     diagnosis.summary = diagnosis.summary.replace(
       new RegExp(`${levelLabel[oldLevel]}\\s*수준`),
       `${levelLabel[newLevel]} 수준`
     );
-    // If regex didn't match, append level change note
     if (!diagnosis.summary.includes(`${levelLabel[newLevel]} 수준`)) {
       diagnosis.summary = `현재 ${levelLabel[newLevel]} 수준입니다. ${diagnosis.summary}`;
-    }
-    // Update guidance based on direction
-    if (!isPromotion) {
-      diagnosis.summary += ` (최근 테스트 결과에 따라 ${levelLabel[oldLevel]}에서 ${levelLabel[newLevel]}로 조정되었습니다. 기초 개념을 다시 복습하는 것을 권장합니다.)`;
-    } else {
-      diagnosis.summary += ` (최근 테스트 결과에 따라 ${levelLabel[oldLevel]}에서 ${levelLabel[newLevel]}로 승급했습니다!)`;
     }
     await saveDiagnosis(topicId, diagnosis);
     return { changed: true, oldLevel, newLevel };

@@ -143,16 +143,25 @@ export function LearningSession({
       await saveSession();
     }
 
-    // Build recent messages for direct prompt inclusion (fast path)
+    // Build conversation history for system prompt context
     const RECENT_COUNT = 20;
-    let recentMessages: string | undefined;
+    let conversationHistory: string | undefined;
+    let lastUserMessage: string | undefined;
     if (hasHistory) {
       const recent = currentMessages.length > RECENT_COUNT
         ? currentMessages.slice(-RECENT_COUNT)
         : currentMessages;
-      recentMessages = recent
+      conversationHistory = recent
         .map((m) => `[${m.role === "user" ? "학생" : "교사"}]\n${m.content}`)
         .join("\n\n---\n\n");
+
+      // Extract the last user message to send as the user prompt
+      for (let i = currentMessages.length - 1; i >= 0; i--) {
+        if (currentMessages[i].role === "user") {
+          lastUserMessage = currentMessages[i].content;
+          break;
+        }
+      }
     }
 
     // Add placeholder for AI response
@@ -172,7 +181,8 @@ export function LearningSession({
           conceptTitle,
           mode,
           formats,
-          ...(recentMessages ? { recentMessages } : {}),
+          ...(conversationHistory ? { conversationHistory } : {}),
+          ...(lastUserMessage ? { lastUserMessage } : {}),
           ...(currentMessages.length > RECENT_COUNT ? { sessionFilePath: `data/topics/${topicId}/sessions/${sessionId}.json` } : {}),
           ...(reviewQuestions && reviewQuestions.length > 0 && !hasHistory ? { reviewQuestions } : {}),
         }),

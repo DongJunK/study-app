@@ -63,16 +63,20 @@ ${previousResults.map((r, i) => `${i + 1}. [${r.score}/${r.maxScore}점] ${r.que
 ` : '';
 
   const levelLabel: Record<string, string> = { beginner: '초급', intermediate: '중급', advanced: '고급' };
+  const currentLevel = levelLabel[userLevel] || '초급';
+
+  const levelQuestionGuide: Record<string, string> = {
+    beginner: '기본 개념 이해, 용어 정의, 간단한 비교를 묻는 문제를 출제하세요. 심화 내용이나 내부 구현을 묻지 마세요.',
+    intermediate: '개념 간 관계, 실무 적용, 동작 원리를 묻는 문제를 출제하세요.',
+    advanced: '내부 구현, 성능 최적화, 장애 대응, 아키텍처 설계를 묻는 문제를 출제하세요.',
+  };
+
   const levelSection = `
 ## 출제 난이도
-현재 학생의 수준: **${levelLabel[userLevel] || '초급'}**
+현재 학생의 수준: **${currentLevel}**
 
-### 수준별 출제 기준
-- **초급**: 기본 개념 이해, 용어 정의, 간단한 비교 문제
-- **중급**: 개념 간 관계, 실무 적용, 동작 원리 문제
-- **고급**: 내부 구현, 성능 최적화, 장애 대응, 아키텍처 설계 문제
-
-학생의 수준에 맞는 난이도로 출제하세요.
+### 출제 지침
+${levelQuestionGuide[userLevel] || levelQuestionGuide.beginner}
 각 문제 출제 시 난이도를 표시하세요: [초급], [중급], [고급]
 `;
 
@@ -160,16 +164,40 @@ ${previousResults.map((r, i) => `${i + 1}. [${r.score}/${r.maxScore}점] ${r.que
 ` : '';
 
   const levelLabel: Record<string, string> = { beginner: '초급', intermediate: '중급', advanced: '고급' };
+  const currentLevel = levelLabel[userLevel] || '초급';
+
+  const levelGrading: Record<string, string> = {
+    beginner: `### 초급 채점 기준 (기본 개념 이해 중심)
+- 1-3점: 기본 용어나 정의를 모르는 경우
+- 4-6점: 용어는 알지만 설명이 불명확하거나 부정확한 경우
+- 7-9점: 기본 개념을 정확하게 설명한 경우
+- 10점: 기본 개념을 명확하게 설명하고 간단한 예시까지 제시한 경우
+
+**중요: 초급 수준에서는 심화 내용이나 내부 구현을 몰라도 감점하지 마세요. 기본 개념을 정확히 이해하고 있는지만 평가하세요.**`,
+    intermediate: `### 중급 채점 기준 (실무 적용 중심)
+- 1-3점: 개념 간 관계를 이해하지 못하는 경우
+- 4-6점: 개념은 알지만 실무 적용이나 동작 원리 설명이 부족한 경우
+- 7-9점: 동작 원리와 실무 적용을 정확하게 설명한 경우
+- 10점: 실무 경험에 기반한 구체적 사례까지 포함한 경우`,
+    advanced: `### 고급 채점 기준 (심화 이해 중심)
+- 1-3점: 내부 구현이나 최적화 전략을 전혀 모르는 경우
+- 4-6점: 기본 원리는 알지만 심화 내용이 부족한 경우
+- 7-9점: 내부 구현, 성능 최적화, 트레이드오프를 정확하게 분석한 경우
+- 10점: 아키텍처 관점에서 종합적 분석과 대안까지 제시한 경우`,
+  };
+
+  const levelQuestionGuide: Record<string, string> = {
+    beginner: '기본 개념 이해, 용어 정의, 간단한 비교를 묻는 문제를 출제하세요. 심화 내용이나 내부 구현을 묻지 마세요.',
+    intermediate: '개념 간 관계, 실무 적용, 동작 원리를 묻는 문제를 출제하세요.',
+    advanced: '내부 구현, 성능 최적화, 장애 대응, 아키텍처 설계를 묻는 문제를 출제하세요.',
+  };
+
   const levelSection = `
 ## 출제 난이도
-현재 학생의 수준: **${levelLabel[userLevel] || '초급'}**
+현재 학생의 수준: **${currentLevel}**
 
-### 수준별 출제 기준
-- **초급**: 기본 개념 이해, 용어 정의, 간단한 비교 문제
-- **중급**: 개념 간 관계, 실무 적용, 동작 원리 문제
-- **고급**: 내부 구현, 성능 최적화, 장애 대응, 아키텍처 설계 문제
-
-학생의 수준에 맞는 난이도로 출제하세요.
+### 출제 지침
+${levelQuestionGuide[userLevel] || levelQuestionGuide.beginner}
 각 문제 출제 시 난이도를 표시하세요: [초급], [중급], [고급]
 `;
 
@@ -181,20 +209,17 @@ ${prevSection}${levelSection}
 ## 진행 방식
 1. 서술형 주관식 문제를 하나씩 출제하세요.
 2. 총 5문제를 출제합니다.
-3. 학생이 답변하면 1-10점 척도로 채점하고 피드백을 제공하세요.
+3. 학생이 답변하면 아래 채점 기준에 따라 1-10점 척도로 채점하고 피드백을 제공하세요.
 4. 모든 문제가 끝나면 종합 결과를 제공하세요.
 
 ## 문제 형식
 각 문제는 다음과 같이 출제하세요:
 
 **문제 N.** [난이도]
-[서술형 질문 - 개념 설명, 비교 분석, 적용 사례 등을 요구]
+[서술형 질문 - 학생의 수준에 맞는 난이도로 출제]
 
 ## 채점 기준
-- 1-3점: 핵심 개념 누락, 부정확한 설명
-- 4-6점: 기본 이해는 있으나 깊이 부족
-- 7-9점: 정확하고 체계적인 설명
-- 10점: 심화 내용까지 포함한 완벽한 답변
+${levelGrading[userLevel] || levelGrading.beginner}
 
 ## 응답 형식
 학생의 답변 후 반드시 아래 마크다운 구조로 피드백을 작성한 뒤, 마지막에 JSON을 포함하세요.

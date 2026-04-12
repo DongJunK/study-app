@@ -81,7 +81,7 @@ export async function updateLevelFromTestResults(
   let newLevel = oldLevel;
 
   // 승급
-  if (oldLevel === 'beginner' && allAbove(0.7)) {
+  if (oldLevel === 'beginner' && currentPct >= 0.7) {
     newLevel = 'intermediate';
   } else if (oldLevel === 'intermediate' && allAbove(0.9)) {
     newLevel = 'advanced';

@@ -1,0 +1,18 @@
+{
+  "level": "beginner",
+  "strengths": [
+    "Inverted Index(역색인) 원리에 대한 정확한 이해",
+    "RDBMS와 Elasticsearch 구조 매핑에 대한 명확한 이해",
+    "Shard/Replica를 통한 분산 저장 및 고가용성 개념 이해",
+    "Bulk API의 비원자적(non-atomic) 특성 이해",
+    "Kibana를 활용한 클러스터 리소스 모니터링 실무 경험",
+    "Aggregation(terms, composite, top_hits) 활용한 통계 구현 실무 경험"
+  ],
+  "weaknesses": [
+    "Analyzer 구성요소(Character Filter, Tokenizer, Token Filter)에 대한 이해 부족",
+    "match vs term 쿼리의 핵심 차이(Analyzer 적용 여부)에 대한 정확한 이해 필요",
+    "text vs keyword 필드 타입에 따른 쿼리 전략 학습 필요"
+  ],
+  "summary": "Elasticsearch의 기본 개념과 클러스터 구조를 잘 이해하고 있으며, 실무에서 모니터링과 집계 기능을 활용한 경험이 있는 초급 수준입니다. 텍스트 분석(Analyzer) 파이프라인과 필드 타입별 쿼리 전략에 대한 학습을 보강하면 중급 수준으로 도약할 수 있습니다. (최근 테스트 결과에 따라 중급에서 초급으로 조정되었습니다. 기초 개념을 다시 복습하는 것을 권장합니다.)",
+  "completedAt": "2026-04-06T14:02:24.378Z"
+}

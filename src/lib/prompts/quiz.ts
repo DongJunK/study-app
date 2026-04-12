@@ -43,7 +43,7 @@ ${strategicSection}
 - 반드시 10문제를 생성하세요.`;
 }
 
-export function getMultipleChoicePrompt(topicName: string, concepts: string[], previousResults?: { question: string; score: number; maxScore: number }[]): string {
+export function getMultipleChoicePrompt(topicName: string, concepts: string[], previousResults?: { question: string; score: number; maxScore: number }[], userLevel: string = 'beginner'): string {
   const conceptList = concepts.length > 0 ? concepts.join(', ') : topicName;
 
   const prevSection = previousResults && previousResults.length > 0 ? `
@@ -62,11 +62,25 @@ export function getMultipleChoicePrompt(topicName: string, concepts: string[], p
 ${previousResults.map((r, i) => `${i + 1}. [${r.score}/${r.maxScore}점] ${r.question}`).join('\n')}
 ` : '';
 
+  const levelLabel: Record<string, string> = { beginner: '초급', intermediate: '중급', advanced: '고급' };
+  const levelSection = `
+## 출제 난이도
+현재 학생의 수준: **${levelLabel[userLevel] || '초급'}**
+
+### 수준별 출제 기준
+- **초급**: 기본 개념 이해, 용어 정의, 간단한 비교 문제
+- **중급**: 개념 간 관계, 실무 적용, 동작 원리 문제
+- **고급**: 내부 구현, 성능 최적화, 장애 대응, 아키텍처 설계 문제
+
+학생의 수준에 맞는 난이도로 출제하세요.
+각 문제 출제 시 난이도를 표시하세요: [초급], [중급], [고급]
+`;
+
   return `당신은 "${topicName}" 분야의 객관식 퀴즈 출제 전문가입니다.
 
 ## 퀴즈 대상 개념
 ${conceptList}
-${prevSection}
+${prevSection}${levelSection}
 ## 진행 방식
 1. 4지선다 객관식 문제를 하나씩 출제하세요.
 2. 총 5문제를 출제합니다.
@@ -77,7 +91,7 @@ ${prevSection}
 ## 문제 형식
 각 문제는 다음과 같이 출제하세요:
 
-**문제 N.**
+**문제 N.** [난이도]
 [질문 내용]
 
 1. [선택지 1]
@@ -126,7 +140,7 @@ ${prevSection}
 - 첫 번째 문제를 바로 시작하세요`;
 }
 
-export function getShortAnswerPrompt(topicName: string, concepts: string[], previousResults?: { question: string; score: number; maxScore: number }[]): string {
+export function getShortAnswerPrompt(topicName: string, concepts: string[], previousResults?: { question: string; score: number; maxScore: number }[], userLevel: string = 'beginner'): string {
   const conceptList = concepts.length > 0 ? concepts.join(', ') : topicName;
 
   const prevSection = previousResults && previousResults.length > 0 ? `
@@ -145,11 +159,25 @@ export function getShortAnswerPrompt(topicName: string, concepts: string[], prev
 ${previousResults.map((r, i) => `${i + 1}. [${r.score}/${r.maxScore}점] ${r.question}`).join('\n')}
 ` : '';
 
+  const levelLabel: Record<string, string> = { beginner: '초급', intermediate: '중급', advanced: '고급' };
+  const levelSection = `
+## 출제 난이도
+현재 학생의 수준: **${levelLabel[userLevel] || '초급'}**
+
+### 수준별 출제 기준
+- **초급**: 기본 개념 이해, 용어 정의, 간단한 비교 문제
+- **중급**: 개념 간 관계, 실무 적용, 동작 원리 문제
+- **고급**: 내부 구현, 성능 최적화, 장애 대응, 아키텍처 설계 문제
+
+학생의 수준에 맞는 난이도로 출제하세요.
+각 문제 출제 시 난이도를 표시하세요: [초급], [중급], [고급]
+`;
+
   return `당신은 "${topicName}" 분야의 주관식 퀴즈 출제 전문가입니다.
 
 ## 퀴즈 대상 개념
 ${conceptList}
-${prevSection}
+${prevSection}${levelSection}
 ## 진행 방식
 1. 서술형 주관식 문제를 하나씩 출제하세요.
 2. 총 5문제를 출제합니다.
@@ -159,7 +187,7 @@ ${prevSection}
 ## 문제 형식
 각 문제는 다음과 같이 출제하세요:
 
-**문제 N.**
+**문제 N.** [난이도]
 [서술형 질문 - 개념 설명, 비교 분석, 적용 사례 등을 요구]
 
 ## 채점 기준

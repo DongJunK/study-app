@@ -2,7 +2,7 @@ import { createClaudeStream } from '@/lib/claude/stream';
 import { getDeepTestPrompt, getStrategicTestPrompt } from '@/lib/prompts/deep-test';
 import { getMultipleChoicePrompt, getShortAnswerPrompt } from '@/lib/prompts/quiz';
 import { getWeaknesses } from '@/lib/data/weaknessManager';
-import { getRoadmap } from '@/lib/data/roadmapManager';
+import { getRoadmap, getDiagnosis } from '@/lib/data/roadmapManager';
 import { getTestResults } from '@/lib/data/testManager';
 import type { TestType } from '@/types/test';
 
@@ -54,15 +54,19 @@ export async function POST(request: Request) {
           maxScore: a.maxScore,
         })));
 
+      // Fetch user level for difficulty adjustment
+      const diagnosis = await getDiagnosis(topicId);
+      const userLevel = diagnosis?.level || 'beginner';
+
       switch (type) {
         case 'deep-learning':
           systemPrompt = getDeepTestPrompt(topicName, concepts || []);
           break;
         case 'multiple-choice':
-          systemPrompt = getMultipleChoicePrompt(topicName, concepts || [], previousResults);
+          systemPrompt = getMultipleChoicePrompt(topicName, concepts || [], previousResults, userLevel);
           break;
         case 'short-answer':
-          systemPrompt = getShortAnswerPrompt(topicName, concepts || [], previousResults);
+          systemPrompt = getShortAnswerPrompt(topicName, concepts || [], previousResults, userLevel);
           break;
         default:
           return Response.json(

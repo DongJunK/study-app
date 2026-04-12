@@ -291,7 +291,7 @@ export function TestSession({
           </div>
           {type !== "multiple-choice" && (
             <span className="text-xs text-muted-foreground">
-              {answers.length}/10 문제
+              {answers.length}/{type === "deep-learning" ? 10 : 5} 문제
             </span>
           )}
           {testFinished ? (
@@ -303,14 +303,14 @@ export function TestSession({
           ) : (
             <Button
               size="sm"
-              variant={answers.length >= 10 ? "default" : "outline"}
+              variant={answers.length >= (type === "deep-learning" ? 10 : 5) ? "default" : "outline"}
               onClick={() => {
-                if (answers.length >= 10) {
+                if (answers.length >= (type === "deep-learning" ? 10 : 5)) {
                   setTestFinished(true);
                 }
               }}
-              disabled={answers.length < 10 || isStreaming}
-              title={answers.length < 10 ? `최소 10문제 이상 답변해야 합니다 (현재 ${answers.length}문제)` : ""}
+              disabled={answers.length < (type === "deep-learning" ? 10 : 5) || isStreaming}
+              title={answers.length < (type === "deep-learning" ? 10 : 5) ? `최소 ${type === "deep-learning" ? 10 : 5}문제 이상 답변해야 합니다 (현재 ${answers.length}문제)` : ""}
             >
               테스트 종료
             </Button>
@@ -363,7 +363,7 @@ function getSystemPromptForType(type: TestType, topicName: string): string {
     case "deep-learning":
       return `당신은 "${topicName}" 분야의 심층 학습 검증 전문가입니다. 이전 대화를 이어서 진행하세요. 학생의 답변을 평가하고 점수를 매긴 뒤, 꼬리질문을 계속하세요. 각 답변 평가 후 반드시 \`\`\`json {"score": N, "maxScore": 10, "passed": true/false, "feedback": "피드백", "modelAnswer": "이 질문에 대한 모범 답변"} \`\`\` 형식의 JSON을 포함하세요. modelAnswer는 6년차 개발자 수준의 모범 답변을 간결하게 작성하세요. 모든 질문이 끝나면 \`\`\`json {"type": "final", "totalQuestions": N, "summary": "종합 평가"} \`\`\` 를 포함하세요. 한국어로 진행하세요.`;
     case "multiple-choice":
-      return `당신은 "${topicName}" 분야의 객관식 퀴즈 출제 전문가입니다. 이전 대화를 이어서 진행하세요. 학생의 답을 채점하고 다음 문제를 출제하세요. 정답: \`\`\`json {"score": 10, "maxScore": 10, "passed": true, "feedback": "해설"} \`\`\`, 오답: \`\`\`json {"score": 0, "maxScore": 10, "passed": false, "feedback": "해설"} \`\`\`. 모든 문제 후: \`\`\`json {"type": "final", "totalQuestions": 5, "summary": "종합 평가"} \`\`\`. 한국어로 진행하세요.`;
+      return `당신은 "${topicName}" 분야의 객관식 퀴즈 출제 전문가입니다. 이전 대화를 이어서 진행하세요. 학생의 답을 채점하고 다음 문제를 출제하세요. 정답: \`\`\`json {"score": 10, "maxScore": 10, "passed": true, "feedback": "해설"} \`\`\`, 오답: \`\`\`json {"score": 0, "maxScore": 10, "passed": false, "feedback": "해설"} \`\`\`. 모든 문제 후: \`\`\`json {"type": "final", "totalQuestions": 10, "summary": "종합 평가"} \`\`\`. 한국어로 진행하세요.`;
     case "short-answer":
       return `당신은 "${topicName}" 분야의 주관식 퀴즈 출제 전문가입니다. 이전 대화를 이어서 진행하세요. 학생의 답변을 1-10점 척도로 채점하세요. \`\`\`json {"score": N, "maxScore": 10, "passed": true/false, "feedback": "피드백", "modelAnswer": "이 질문에 대한 모범 답변"} \`\`\`. modelAnswer는 핵심을 간결하게 작성하세요. 모든 문제 후: \`\`\`json {"type": "final", "totalQuestions": 5, "summary": "종합 평가"} \`\`\`. 한국어로 진행하세요.`;
   }

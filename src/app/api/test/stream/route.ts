@@ -44,19 +44,23 @@ export async function POST(request: Request) {
 
       systemPrompt = getStrategicTestPrompt(topicName, concepts || [], weaknessNames, learnedConcepts);
     } else {
+      // Fetch user level for difficulty adjustment
+      const diagnosis = await getDiagnosis(topicId);
+      const userLevel = diagnosis?.level || 'beginner';
+
       // Fetch previous test results for score-based question strategy
       const allTestResults = await getTestResults(topicId);
+      const levelOrder: Record<string, number> = { beginner: 0, intermediate: 1, advanced: 2 };
+      const currentLevelOrder = levelOrder[userLevel] ?? 0;
+
       const previousResults = allTestResults
         .filter(r => r.type === type)
         .flatMap(r => r.answers.map(a => ({
           question: a.question,
           score: a.score,
           maxScore: a.maxScore,
+          fromLowerLevel: (levelOrder[r.level || 'beginner'] ?? 0) < currentLevelOrder,
         })));
-
-      // Fetch user level for difficulty adjustment
-      const diagnosis = await getDiagnosis(topicId);
-      const userLevel = diagnosis?.level || 'beginner';
 
       switch (type) {
         case 'deep-learning':

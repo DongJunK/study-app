@@ -21,6 +21,7 @@ export interface TestResult {
   maxTotalScore: number;
   passThreshold: number;
   passed: boolean;
+  level?: string;
   createdAt: string;
   followUpQnA: Array<{
     question: string;

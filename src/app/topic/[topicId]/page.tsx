@@ -407,7 +407,12 @@ export default function TopicDetailPage() {
                           <Badge variant="secondary" className="text-xs">{testTypeLabel[t.type] ?? t.type}</Badge>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className={`text-sm font-medium ${scoreColor(pct)}`}>{pct}점</span>
+                          {t.level && (
+                            <Badge variant="secondary" className="text-xs">
+                              {{ beginner: "초급", intermediate: "중급", advanced: "고급" }[t.level] || t.level}
+                            </Badge>
+                          )}
+                          <span className={`text-sm font-medium ${scoreColor(pct)}`}>{pct}%</span>
                           <Badge variant={t.passed ? "default" : "outline"} className="text-xs">
                             {t.passed ? "합격" : "불합격"}
                           </Badge>

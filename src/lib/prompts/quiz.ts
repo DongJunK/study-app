@@ -43,14 +43,14 @@ ${strategicSection}
 - 반드시 10문제를 생성하세요.`;
 }
 
-export function getMultipleChoicePrompt(topicName: string, concepts: string[], previousResults?: { question: string; score: number; maxScore: number }[], userLevel: string = 'beginner'): string {
+export function getMultipleChoicePrompt(topicName: string, concepts: string[], previousResults?: { question: string; score: number; maxScore: number; fromLowerLevel?: boolean }[], userLevel: string = 'beginner'): string {
   const conceptList = concepts.length > 0 ? concepts.join(', ') : topicName;
 
   const prevSection = previousResults && previousResults.length > 0 ? `
 ## 이전 테스트 결과 기반 출제 전략
 아래는 이전 테스트에서 출제된 문제와 점수입니다. 이를 참고하여 출제하세요.
 
-### 출제 규칙
+### 출제 규칙 (현재 수준 테스트 결과)
 | 이전 점수 | 전략 |
 |-----------|------|
 | 7점 이상 | 해당 개념은 제외하거나 더 심화된 관점으로 출제 |
@@ -58,8 +58,11 @@ export function getMultipleChoicePrompt(topicName: string, concepts: string[], p
 | 1-3점 | 같은 개념을 우선 재출제 |
 | 미출제 | 새로운 개념으로 출제 |
 
+### 하위 수준 테스트 결과 규칙
+아래 이력 중 [하위수준]으로 표시된 문제는 낮은 수준에서 통과한 것이므로, **절대 제외하지 말고** 현재 수준에 맞게 더 심화된 관점으로 반드시 재출제하세요.
+
 ### 이전 테스트 이력
-${previousResults.map((r, i) => `${i + 1}. [${r.score}/${r.maxScore}점] ${r.question}`).join('\n')}
+${previousResults.map((r, i) => `${i + 1}. [${r.score}/${r.maxScore}점]${r.fromLowerLevel ? ' [하위수준]' : ''} ${r.question}`).join('\n')}
 ` : '';
 
   const levelLabel: Record<string, string> = { beginner: '초급', intermediate: '중급', advanced: '고급' };
@@ -144,14 +147,14 @@ ${prevSection}${levelSection}
 - 첫 번째 문제를 바로 시작하세요`;
 }
 
-export function getShortAnswerPrompt(topicName: string, concepts: string[], previousResults?: { question: string; score: number; maxScore: number }[], userLevel: string = 'beginner'): string {
+export function getShortAnswerPrompt(topicName: string, concepts: string[], previousResults?: { question: string; score: number; maxScore: number; fromLowerLevel?: boolean }[], userLevel: string = 'beginner'): string {
   const conceptList = concepts.length > 0 ? concepts.join(', ') : topicName;
 
   const prevSection = previousResults && previousResults.length > 0 ? `
 ## 이전 테스트 결과 기반 출제 전략
 아래는 이전 테스트에서 출제된 문제와 점수입니다. 이를 참고하여 출제하세요.
 
-### 출제 규칙
+### 출제 규칙 (현재 수준 테스트 결과)
 | 이전 점수 | 전략 |
 |-----------|------|
 | 7점 이상 | 해당 개념은 제외하거나 더 심화된 관점으로 출제 |
@@ -159,8 +162,11 @@ export function getShortAnswerPrompt(topicName: string, concepts: string[], prev
 | 1-3점 | 같은 개념을 우선 재출제 |
 | 미출제 | 새로운 개념으로 출제 |
 
+### 하위 수준 테스트 결과 규칙
+아래 이력 중 [하위수준]으로 표시된 문제는 낮은 수준에서 통과한 것이므로, **절대 제외하지 말고** 현재 수준에 맞게 더 심화된 관점으로 반드시 재출제하세요.
+
 ### 이전 테스트 이력
-${previousResults.map((r, i) => `${i + 1}. [${r.score}/${r.maxScore}점] ${r.question}`).join('\n')}
+${previousResults.map((r, i) => `${i + 1}. [${r.score}/${r.maxScore}점]${r.fromLowerLevel ? ' [하위수준]' : ''} ${r.question}`).join('\n')}
 ` : '';
 
   const levelLabel: Record<string, string> = { beginner: '초급', intermediate: '중급', advanced: '고급' };

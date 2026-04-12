@@ -18,6 +18,17 @@ export async function POST(request: Request) {
       );
     }
 
+    // Attach current level to test result
+    try {
+      const { getDiagnosis } = await import('@/lib/data/roadmapManager');
+      const diagnosis = await getDiagnosis(topicId);
+      if (diagnosis?.level) {
+        result.level = diagnosis.level;
+      }
+    } catch {
+      // Level attachment failure should not block save
+    }
+
     await saveTestResult(topicId, result);
 
     // Record growth data

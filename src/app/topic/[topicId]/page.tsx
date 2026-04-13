@@ -68,7 +68,7 @@ function AnswerDetailCard({ answer, index, isMC }: { answer: TestAnswer; index: 
       >
         <div className="flex items-center gap-3">
           <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold">{index + 1}</span>
-          <span className="text-sm font-medium line-clamp-1">{answer.question || `질문 ${index + 1}`}</span>
+          <span className="text-sm font-medium">문제 {index + 1}</span>
         </div>
         <div className="flex items-center gap-2.5 shrink-0">
           <span className="text-sm font-semibold">{answer.score}/{answer.maxScore}</span>

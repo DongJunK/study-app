@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, BookOpen, ClipboardCheck, Target, MessageCircle, Settings, Briefcase } from "lucide-react";
+import { LayoutDashboard, BookOpen, ClipboardCheck, Target, MessageCircle, Settings, Briefcase, FileText } from "lucide-react";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,7 @@ const navItems = [
   { href: "/test", label: "테스트", icon: ClipboardCheck },
   { href: "/weakness", label: "약점", icon: Target },
   { href: "/qna", label: "Q&A", icon: MessageCircle },
+  { href: "/technotes", label: "기술 정리", icon: FileText },
 ] as const;
 
 function NavTooltip({ label, collapsed }: { label: string; collapsed: boolean }) {

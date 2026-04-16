@@ -45,6 +45,7 @@ ${previousMessages ? `=== 이전 대화 ===\n${previousMessages}\n==============
     const stream = createClaudeStream(prompt, systemPrompt, [
       'Read',
       `Edit(${dataDir}/**)`,
+      `Write(${dataDir}/**)`,
     ]);
 
     return new Response(stream, {

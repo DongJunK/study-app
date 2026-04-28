@@ -245,11 +245,7 @@ export default function TopicTechNotesPage() {
                 <FileText className="size-8 text-muted-foreground/50" />
               </div>
               <p className="text-lg font-semibold text-muted-foreground mb-2">아직 기술 정리가 없습니다</p>
-              <p className="text-sm text-muted-foreground/70 mb-6">학습한 내용이나 테스트 결과를 기술 블로그처럼 정리해보세요.</p>
-              <Button onClick={handleOpenSources} className="gap-1.5">
-                <Plus className="size-4" />
-                첫 번째 정리 만들기
-              </Button>
+              <p className="text-sm text-muted-foreground/70">상단의 추가하기 버튼을 눌러 학습 내용을 정리해보세요.</p>
             </div>
           )}
 
